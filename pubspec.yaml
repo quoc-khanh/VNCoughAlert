@@ -34,6 +34,12 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  flutter_riverpod: ^3.4.2
+  iconfy_icon:
+    git:
+      url: https://github.com/fhihung/iconfy_icon.git
+  motor: ^1.1.0
+  zenrouter: ^2.2.0
 
 dev_dependencies:
   flutter_test:

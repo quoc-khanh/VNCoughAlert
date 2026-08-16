@@ -1,0 +1,15 @@
+---
+description: VNCoughAlert design system — tokens, shared components, no ad-hoc colors
+alwaysApply: true
+---
+
+# VNCoughAlert Design System
+
+- UI colors/typography/spacing/radius: only `AppColor` / `AppTextStyle` / `AppSpace` / `AppRadius` from `package:vncoughalert/design_system/`.
+- Sheets, cards, bubbles, floating panels: `AppRadius.superellipse(AppRadius.bubble|control)` (`RoundedSuperellipseBorder`). Do not use `RoundedRectangleBorder` / `BorderRadius.circular` for those surfaces.
+- Pills and fully round controls: `AppRadius.pill` (search chip, upgrade pill).
+- Shared widgets live in `lib/design_system/components/`. Features compose them; do not copy composer/bubble/sidebar markup.
+- New shared widget → follow skill `add-ds-component` (file + `@Preview` in `ds_previews.dart`).
+- Missing token → ask the user. Do not add `Color(0x…)` / `Colors.grey` / ad-hoc `TextStyle` in features.
+- Routing: **zenrouter** Coordinator (not go_router). State: **flutter_riverpod** `Notifier`.
+- Official Flutter skills live in `.agents/skills/`. Do not use `flutter-setup-declarative-routing`.
