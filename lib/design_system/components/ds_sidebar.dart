@@ -207,7 +207,8 @@ class _DsSidebarPanelState extends State<DsSidebarPanel> {
                 motion: const CupertinoMotion.snappy(),
                 value: _searchOpen ? 1.0 : 0.0,
                 builder: (context, t, child) {
-                  final hideTitle = (1 - t).clamp(0.0, 1.0);
+                  final progress = t.clamp(0.0, 1.0);
+                  final hideTitle = 1 - progress;
                   return Row(
                     children: [
                       ClipRect(
@@ -233,24 +234,25 @@ class _DsSidebarPanelState extends State<DsSidebarPanel> {
                       Expanded(
                         child: LayoutBuilder(
                           builder: (context, constraints) {
-                            final width =
-                                DsSidebarSearch.collapsedWidth +
-                                (constraints.maxWidth -
-                                        DsSidebarSearch.collapsedWidth) *
-                                    t.clamp(0.0, 1.0);
+                            final available = constraints.maxWidth;
+                            if (!available.isFinite || available <= 0) {
+                              return const SizedBox.shrink();
+                            }
+                            final collapsed = DsSidebarSearch.collapsedWidth;
+                            final width = available <= collapsed
+                                ? available
+                                : collapsed +
+                                      (available - collapsed) * progress;
                             return Align(
                               alignment: Alignment.centerRight,
                               child: SizedBox(
-                                width: width.clamp(
-                                  DsSidebarSearch.collapsedWidth,
-                                  constraints.maxWidth,
-                                ),
+                                width: width,
                                 child: ClipRect(
                                   child: DsSidebarSearch(
                                     controller: widget.searchController,
                                     hintText: widget.searchHint,
                                     focusNode: _searchFocus,
-                                    expand: t,
+                                    expand: progress,
                                     onChanged: widget.onSearchChanged,
                                     onTap: () => _searchFocus.requestFocus(),
                                   ),

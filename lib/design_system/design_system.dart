@@ -1,9 +1,15 @@
 export 'package:vncoughalert/design_system/components/ds_composer.dart';
+export 'package:vncoughalert/design_system/components/ds_demo_action_chip.dart';
+export 'package:vncoughalert/design_system/components/ds_diagnosis_card.dart';
 export 'package:vncoughalert/design_system/components/ds_icon_button.dart';
+export 'package:vncoughalert/design_system/components/ds_markdown_body.dart';
 export 'package:vncoughalert/design_system/components/ds_message_bubble.dart';
 export 'package:vncoughalert/design_system/components/ds_sidebar.dart';
 export 'package:vncoughalert/design_system/components/ds_upgrade_pill.dart';
 export 'package:vncoughalert/design_system/components/ds_voice_button.dart';
+export 'package:vncoughalert/design_system/components/ds_voice_draft_card.dart';
+export 'package:vncoughalert/design_system/components/ds_voice_player.dart';
+export 'package:vncoughalert/design_system/components/ds_voice_waveform.dart';
 export 'package:vncoughalert/design_system/theme/app_theme.dart';
 export 'package:vncoughalert/design_system/tokens/app_color.dart';
 export 'package:vncoughalert/design_system/tokens/app_radius.dart';

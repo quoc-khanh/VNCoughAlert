@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:motor/motor.dart';
+import 'package:vncoughalert/design_system/components/ds_diagnosis_card.dart';
+import 'package:vncoughalert/design_system/components/ds_markdown_body.dart';
+import 'package:vncoughalert/design_system/components/ds_voice_player.dart';
 import 'package:vncoughalert/design_system/tokens/app_color.dart';
 import 'package:vncoughalert/design_system/tokens/app_radius.dart';
 import 'package:vncoughalert/design_system/tokens/app_space.dart';
@@ -7,17 +10,37 @@ import 'package:vncoughalert/design_system/tokens/app_text_style.dart';
 
 enum DsMessageRole { user, assistant }
 
+class DsVoiceAttachment {
+  const DsVoiceAttachment({
+    this.path,
+    required this.duration,
+    this.levels = const [],
+  });
+
+  final String? path;
+  final Duration duration;
+  final List<double> levels;
+}
+
 class DsMessageBubble extends StatefulWidget {
   const DsMessageBubble({
     super.key,
     required this.role,
     required this.text,
     this.isPending = false,
+    this.audios = const [],
+    this.diagnoses = const [],
+    this.onCaseStudy,
+    this.onConnectDoctor,
   });
 
   final DsMessageRole role;
   final String text;
   final bool isPending;
+  final List<DsVoiceAttachment> audios;
+  final List<DsDiagnosisSummary> diagnoses;
+  final VoidCallback? onCaseStudy;
+  final VoidCallback? onConnectDoctor;
 
   @override
   State<DsMessageBubble> createState() => _DsMessageBubbleState();
@@ -83,14 +106,76 @@ class _DsMessageBubbleState extends State<DsMessageBubble> {
                   horizontal: AppSpace.md,
                   vertical: AppSpace.sm,
                 ),
-                child: widget.isPending
+                child: widget.isPending && widget.text.trim().isEmpty
                     ? const DsTypingDots()
-                    : Text(widget.text, style: AppTextStyle.body()),
+                    : _MessageBody(
+                        role: widget.role,
+                        text: widget.text,
+                        audios: widget.audios,
+                        diagnoses: widget.diagnoses,
+                        onCaseStudy: widget.onCaseStudy,
+                        onConnectDoctor: widget.onConnectDoctor,
+                      ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MessageBody extends StatelessWidget {
+  const _MessageBody({
+    required this.role,
+    required this.text,
+    required this.audios,
+    required this.diagnoses,
+    this.onCaseStudy,
+    this.onConnectDoctor,
+  });
+
+  final DsMessageRole role;
+  final String text;
+  final List<DsVoiceAttachment> audios;
+  final List<DsDiagnosisSummary> diagnoses;
+  final VoidCallback? onCaseStudy;
+  final VoidCallback? onConnectDoctor;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasText = text.trim().isNotEmpty;
+    final isAssistant = role == DsMessageRole.assistant;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < audios.length; i++) ...[
+          if (i > 0) const SizedBox(height: AppSpace.sm),
+          DsVoicePlayer(
+            audioPath: audios[i].path,
+            duration: audios[i].duration,
+            levels: audios[i].levels,
+          ),
+        ],
+        if (audios.isNotEmpty && hasText) const SizedBox(height: AppSpace.sm),
+        if (hasText)
+          isAssistant
+              ? DsMarkdownBody(data: text)
+              : Text(text, style: AppTextStyle.body()),
+        if (isAssistant && diagnoses.isNotEmpty) ...[
+          if (hasText) const SizedBox(height: AppSpace.sm),
+          for (var i = 0; i < diagnoses.length; i++) ...[
+            if (i > 0) const SizedBox(height: AppSpace.sm),
+            DsDiagnosisCard(
+              data: diagnoses[i],
+              showActions: i == diagnoses.length - 1,
+              onCaseStudy: onCaseStudy,
+              onConnectDoctor: onConnectDoctor,
+            ),
+          ],
+        ],
+      ],
     );
   }
 }

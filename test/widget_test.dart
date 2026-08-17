@@ -1,15 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mistralai_dart/mistralai_dart.dart' as mistral;
 import 'package:vncoughalert/app.dart';
 import 'package:vncoughalert/design_system/components/ds_composer.dart';
 import 'package:vncoughalert/design_system/components/ds_message_bubble.dart';
 import 'package:vncoughalert/design_system/components/ds_sidebar.dart';
 import 'package:vncoughalert/design_system/components/ds_voice_button.dart';
+import 'package:vncoughalert/features/chat/data/mistral_chat_client.dart';
+import 'package:vncoughalert/features/chat/providers/chat_providers.dart';
 import 'package:vncoughalert/router/app_coordinator.dart';
+
+class _WidgetFakeLlm implements ChatLlmClient {
+  @override
+  Stream<String> stream(List<mistral.ChatMessage> messages) async* {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    final lastUser = messages.reversed.firstWhere((m) => m.role == 'user');
+    final content = lastUser.toJson()['content'] as String;
+    yield 'Đây là phản hồi mẫu (mock) cho: "$content"';
+  }
+}
 
 void main() {
   Future<void> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(VnCoughAlertRoot(coordinator: AppCoordinator()));
+    await tester.pumpWidget(
+      VnCoughAlertRoot(
+        coordinator: AppCoordinator(),
+        overrides: [chatLlmClientProvider.overrideWithValue(_WidgetFakeLlm())],
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -58,13 +76,13 @@ void main() {
   testWidgets('chat smoke: composer and sidebar recents', (tester) async {
     await pumpApp(tester);
 
-    expect(find.text('Ask VNCoughAlert'), findsOneWidget);
+    expect(find.text('Nhập tin nhắn...'), findsOneWidget);
 
     await openSidebar(tester);
 
     expect(find.text('Recents'), findsOneWidget);
     expect(find.text('Library'), findsOneWidget);
-    expect(find.text('Chống rung X100VI vs X-E5'), findsOneWidget);
+    expect(find.text('Ho khan kéo dài 2 tuần'), findsOneWidget);
   });
 
   testWidgets('first send stays on this screen with user then mock reply', (
@@ -76,7 +94,7 @@ void main() {
     expect(bubbleText('Unique ping 42'), findsOneWidget);
     expect(recentText('Unique ping 42'), findsOneWidget);
     expect(find.byType(DsTypingDots), findsOneWidget);
-    expect(find.text('Ask VNCoughAlert'), findsOneWidget);
+    expect(find.text('Nhập tin nhắn...'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 600));
     await tester.pump();
@@ -86,7 +104,7 @@ void main() {
       bubbleText('Đây là phản hồi mẫu (mock) cho: "Unique ping 42"'),
       findsOneWidget,
     );
-    expect(find.text('Ask VNCoughAlert'), findsOneWidget);
+    expect(find.text('Nhập tin nhắn...'), findsOneWidget);
   });
 
   testWidgets('second send on empty chat stays on one composer', (
@@ -102,7 +120,7 @@ void main() {
 
     expect(bubbleText('First unique'), findsOneWidget);
     expect(bubbleText('Second unique'), findsOneWidget);
-    expect(find.text('Ask VNCoughAlert'), findsOneWidget);
+    expect(find.text('Nhập tin nhắn...'), findsOneWidget);
   });
 
   testWidgets('new chat after send keeps session in recents', (tester) async {
@@ -181,7 +199,7 @@ void main() {
       bubbleText('Đây là phản hồi mẫu (mock) cho: "Stay on draft"'),
       findsOneWidget,
     );
-    expect(find.text('Ask VNCoughAlert'), findsOneWidget);
+    expect(find.text('Nhập tin nhắn...'), findsOneWidget);
   });
 
   testWidgets('new chat after opening a seed then send keeps the seed', (
@@ -189,9 +207,9 @@ void main() {
   ) async {
     await pumpApp(tester);
     await openSidebar(tester);
-    await tapRecent(tester, 'Tai nghe Sony Logitech');
+    await tapRecent(tester, 'Khó thở nhẹ buổi tối');
 
-    expect(bubbleText('Tai nghe Sony Logitech'), findsOneWidget);
+    expect(bubbleText('Khó thở nhẹ buổi tối'), findsOneWidget);
 
     await tester.tap(find.byTooltip('New chat'));
     await tester.pumpAndSettle();
@@ -200,7 +218,7 @@ void main() {
     await tester.pump();
 
     await openSidebar(tester);
-    expect(recentText('Tai nghe Sony Logitech'), findsOneWidget);
+    expect(recentText('Khó thở nhẹ buổi tối'), findsOneWidget);
     expect(recentText('Brand new thread'), findsOneWidget);
     expect(bubbleText('Brand new thread'), findsOneWidget);
   });

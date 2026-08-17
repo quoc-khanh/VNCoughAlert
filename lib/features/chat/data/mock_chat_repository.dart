@@ -1,4 +1,5 @@
 import 'package:vncoughalert/features/chat/domain/models/chat_models.dart';
+import 'package:vncoughalert/features/chat/domain/models/diagnosis_models.dart';
 
 class MockChatRepository {
   MockChatRepository() {
@@ -41,13 +42,37 @@ class MockChatRepository {
     return session;
   }
 
-  ChatMessage addUserMessage({required String chatId, required String text}) {
-    ensureSession(id: chatId, firstUserText: text);
+  ChatMessage addUserMessage({
+    required String chatId,
+    required String text,
+    List<ChatAudio> audios = const [],
+  }) {
+    final titleSource = text.trim().isEmpty ? 'Ghi âm tiếng ho' : text;
+    ensureSession(id: chatId, firstUserText: titleSource);
     final message = ChatMessage(
       id: 'msg_${++_seq}',
       role: ChatRole.user,
       text: text,
       createdAt: DateTime.now(),
+      audios: audios,
+    );
+    _messages.putIfAbsent(chatId, () => []);
+    _messages[chatId]!.add(message);
+    return message;
+  }
+
+  ChatMessage addAssistantMessage({
+    required String chatId,
+    required String text,
+    List<DiagnosisResult> diagnoses = const [],
+  }) {
+    ensureSession(id: chatId, firstUserText: 'Chẩn đoán mới');
+    final message = ChatMessage(
+      id: 'msg_${++_seq}',
+      role: ChatRole.assistant,
+      text: text,
+      createdAt: DateTime.now(),
+      diagnoses: diagnoses,
     );
     _messages.putIfAbsent(chatId, () => []);
     _messages[chatId]!.add(message);
@@ -67,10 +92,53 @@ class MockChatRepository {
     return message;
   }
 
+  void updateAssistant({
+    required String chatId,
+    required String messageId,
+    required String text,
+  }) {
+    _replaceAssistant(
+      chatId: chatId,
+      messageId: messageId,
+      text: text,
+      isPending: true,
+    );
+  }
+
   void completeAssistant({
     required String chatId,
     required String messageId,
     required String text,
+    List<DiagnosisResult> diagnoses = const [],
+  }) {
+    _replaceAssistant(
+      chatId: chatId,
+      messageId: messageId,
+      text: text,
+      isPending: false,
+      diagnoses: diagnoses,
+    );
+  }
+
+  void failAssistant({
+    required String chatId,
+    required String messageId,
+    required String text,
+  }) {
+    _replaceAssistant(
+      chatId: chatId,
+      messageId: messageId,
+      text: text,
+      isPending: false,
+    );
+  }
+
+  void _replaceAssistant({
+    required String chatId,
+    required String messageId,
+    required String text,
+    required bool isPending,
+    List<DiagnosisResult> diagnoses = const [],
   }) {
     final list = _messages[chatId];
     if (list == null) {
@@ -80,7 +148,11 @@ class MockChatRepository {
     if (index < 0) {
       return;
     }
-    list[index] = list[index].copyWith(text: text, isPending: false);
+    list[index] = list[index].copyWith(
+      text: text,
+      isPending: isPending,
+      diagnoses: diagnoses,
+    );
   }
 
   String cannedReply(String userText) {
@@ -102,10 +174,10 @@ class MockChatRepository {
   void _seed() {
     final now = DateTime.now();
     const seeds = [
-      ('s1', 'Chống rung X100VI vs X-E5'),
-      ('s2', 'Tai nghe Sony Logitech'),
-      ('s3', 'Bữa sáng calo bao nhiêu'),
-      ('s4', 'Su telo dane nghĩa gì'),
+      ('s1', 'Ho khan kéo dài 2 tuần'),
+      ('s2', 'Khó thở nhẹ buổi tối'),
+      ('s3', 'Hen suyễn tái phát mùa lạnh'),
+      ('s4', 'Ho có đờm sau cảm cúm'),
     ];
     for (final (id, title) in seeds) {
       _sessions.add(

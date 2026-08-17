@@ -3,10 +3,14 @@ import 'package:flutter/widget_previews.dart';
 import 'package:iconfy_icon/iconfy_icon.dart';
 import 'package:vncoughalert/design_system/components/ds_composer.dart';
 import 'package:vncoughalert/design_system/components/ds_icon_button.dart';
+import 'package:vncoughalert/design_system/components/ds_markdown_body.dart';
 import 'package:vncoughalert/design_system/components/ds_message_bubble.dart';
 import 'package:vncoughalert/design_system/components/ds_sidebar.dart';
 import 'package:vncoughalert/design_system/components/ds_upgrade_pill.dart';
 import 'package:vncoughalert/design_system/components/ds_voice_button.dart';
+import 'package:vncoughalert/design_system/components/ds_voice_draft_card.dart';
+import 'package:vncoughalert/design_system/components/ds_voice_player.dart';
+import 'package:vncoughalert/design_system/components/ds_voice_waveform.dart';
 import 'package:vncoughalert/design_system/theme/app_theme.dart';
 import 'package:vncoughalert/design_system/tokens/app_color.dart';
 import 'package:vncoughalert/design_system/tokens/app_space.dart';
@@ -39,9 +43,7 @@ Widget previewUpgradePill() {
 
 @Preview(name: 'Voice button', group: 'Design System')
 Widget previewVoiceButton() {
-  return dsPreviewShell(
-    child: const DsVoiceButton(onPressed: null),
-  );
+  return dsPreviewShell(child: const DsVoiceButton(onPressed: null));
 }
 
 @Preview(name: 'Composer empty', group: 'Design System')
@@ -65,6 +67,75 @@ Widget previewComposerDisabled() {
   );
 }
 
+@Preview(name: 'Composer recording', group: 'Design System')
+Widget previewComposerRecording() {
+  return dsPreviewShell(
+    child: DsComposer(
+      controller: TextEditingController(),
+      hintText: 'Ask VNCoughAlert',
+      isRecording: true,
+      waveformLevels: const [0.2, 0.55, 0.3, 0.8, 0.4, 0.65, 0.25, 0.5],
+    ),
+  );
+}
+
+@Preview(name: 'Voice waveform', group: 'Design System')
+Widget previewVoiceWaveform() {
+  return dsPreviewShell(
+    child: const SizedBox(
+      width: 240,
+      child: DsVoiceWaveform(
+        levels: [0.2, 0.55, 0.3, 0.8, 0.4, 0.65, 0.25, 0.5, 0.7, 0.35],
+      ),
+    ),
+  );
+}
+
+@Preview(name: 'Voice draft card', group: 'Design System')
+Widget previewVoiceDraftCard() {
+  return dsPreviewShell(
+    child: DsVoiceDraftCard(
+      duration: const Duration(seconds: 12),
+      onRemove: () {},
+    ),
+  );
+}
+
+@Preview(name: 'Voice draft strip', group: 'Design System')
+Widget previewVoiceDraftStrip() {
+  return dsPreviewShell(
+    child: SizedBox(
+      height: DsVoiceDraftCard.extentHeight,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          DsVoiceDraftCard(
+            duration: const Duration(seconds: 4),
+            onRemove: () {},
+          ),
+          const SizedBox(width: AppSpace.xs),
+          DsVoiceDraftCard(
+            duration: const Duration(seconds: 12),
+            onRemove: () {},
+          ),
+          const SizedBox(width: AppSpace.xs),
+          DsVoiceDraftCard(
+            duration: const Duration(seconds: 21),
+            onRemove: () {},
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+@Preview(name: 'Voice player', group: 'Design System')
+Widget previewVoicePlayer() {
+  return dsPreviewShell(
+    child: const DsVoicePlayer(duration: Duration(seconds: 18)),
+  );
+}
+
 @Preview(name: 'User bubble', group: 'Design System')
 Widget previewUserBubble() {
   return dsPreviewShell(
@@ -75,12 +146,60 @@ Widget previewUserBubble() {
   );
 }
 
+@Preview(name: 'User bubble with voice', group: 'Design System')
+Widget previewUserBubbleVoice() {
+  return dsPreviewShell(
+    child: const DsMessageBubble(
+      role: DsMessageRole.user,
+      text: 'Nghe giúp đoạn này.',
+      audios: [
+        DsVoiceAttachment(
+          duration: Duration(seconds: 8),
+          levels: [0.2, 0.5, 0.3, 0.7, 0.4, 0.6],
+        ),
+      ],
+    ),
+  );
+}
+
+@Preview(name: 'Markdown body', group: 'Design System')
+Widget previewMarkdownBody() {
+  return dsPreviewShell(
+    child: const DsMarkdownBody(
+      data: '''
+**In đậm** và *nghiêng*
+
+- Mục một
+- Mục hai
+
+Dùng `inline code` hoặc:
+
+```
+fenced block
+```
+''',
+    ),
+  );
+}
+
 @Preview(name: 'Assistant bubble', group: 'Design System')
 Widget previewAssistantBubble() {
   return dsPreviewShell(
     child: const DsMessageBubble(
       role: DsMessageRole.assistant,
-      text: 'Đây là phản hồi mẫu từ VNCoughAlert.',
+      text:
+          '**Gợi ý:**\n\n- Uống đủ nước\n- Nghỉ ngơi\n\nNếu ho kéo dài, hãy gặp bác sĩ.',
+    ),
+  );
+}
+
+@Preview(name: 'Assistant bubble streaming', group: 'Design System')
+Widget previewAssistantBubbleStreaming() {
+  return dsPreviewShell(
+    child: const DsMessageBubble(
+      role: DsMessageRole.assistant,
+      text: 'Đang trả lời **markdown**…',
+      isPending: true,
     ),
   );
 }
