@@ -1,6 +1,31 @@
 # VNCoughAlert
 
-Flutter chat app (ChatGPT-like UI) using **flutter_riverpod** and **zenrouter**. Two modes share the same chat screen:
+Flutter chat app for respiratory symptom tracking and guidance.
+
+## Quick preview on iPhone
+
+If you want to inspect the UI on your iPhone without making an APK:
+
+1. Run the app in web mode on your dev machine.
+2. Open the shown local URL from Safari on the iPhone.
+3. If needed, add the page to the home screen for a more app-like view.
+
+Typical commands:
+
+```bash
+flutter pub get
+flutter run -d chrome
+```
+
+If you need to expose it to your phone over the local network:
+
+```bash
+flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080
+```
+
+Then open `http://<your-computer-lan-ip>:8080` on the iPhone.
+
+The app uses **flutter_riverpod** and **zenrouter**. Two modes share the same chat screen:
 
 | Mode | How to start | Backend | API key |
 |------|----------------|---------|---------|

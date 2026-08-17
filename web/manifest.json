@@ -1,11 +1,11 @@
 {
-    "name": "vncoughalert",
-    "short_name": "vncoughalert",
+    "name": "VNCoughAlert",
+    "short_name": "VNCoughAlert",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#2367E8",
+    "description": "VNCoughAlert - trợ lý chăm sóc hô hấp trên web.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

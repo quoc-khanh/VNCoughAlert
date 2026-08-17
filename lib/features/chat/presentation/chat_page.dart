@@ -160,6 +160,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
+  double _sidebarWidth() {
+    final width = MediaQuery.sizeOf(context).width;
+    return (width * 0.82).clamp(280.0, 360.0);
+  }
+
   Widget _buildChatSheet({
     required double t,
     required bool sidebarOpen,
@@ -174,10 +179,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           ? (_) => _onSidebarDragStart(open: true)
           : null,
       onHorizontalDragUpdate: sidebarOpen
-          ? (details) => _onSidebarDragUpdate(
-              details.delta.dx,
-              MediaQuery.sizeOf(context).width * 0.82,
-            )
+          ? (details) => _onSidebarDragUpdate(details.delta.dx, _sidebarWidth())
           : null,
       onHorizontalDragEnd: sidebarOpen ? _onSidebarDragEnd : null,
       child: DecoratedBox(
@@ -430,7 +432,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       }
       return session.title.toLowerCase().contains(_query.toLowerCase());
     }).toList();
-    final panelWidth = MediaQuery.sizeOf(context).width * 0.82;
+    final isWide = MediaQuery.sizeOf(context).width >= 960;
+    final panelWidth = _sidebarWidth();
 
     return PopScope(
       canPop: !sidebarOpen,
@@ -442,54 +445,70 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       },
       child: Scaffold(
         backgroundColor: AppColor.sidebar,
-        resizeToAvoidBottomInset: !sidebarOpen,
-        body: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            IgnorePointer(
-              ignoring: (_dragging ? _dragT : (sidebarOpen ? 1.0 : 0.0)) < 0.5,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  width: panelWidth,
-                  child: _buildSidebar(recents),
-                ),
-              ),
-            ),
-            SingleMotionBuilder(
-              motion: const CupertinoMotion.bouncy(),
-              active: !_dragging,
-              value: _dragging ? _dragT : (sidebarOpen ? 1.0 : 0.0),
-              builder: (context, t, child) {
-                return Transform.translate(
-                  offset: Offset(panelWidth * t, 0),
-                  child: _buildChatSheet(
-                    t: t,
-                    sidebarOpen: sidebarOpen,
-                    child: child,
+        resizeToAvoidBottomInset: isWide || !sidebarOpen,
+        body: isWide
+            ? _buildWideLayout(messages, recents)
+            : Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IgnorePointer(
+                    ignoring:
+                        (_dragging ? _dragT : (sidebarOpen ? 1.0 : 0.0)) < 0.5,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        width: panelWidth,
+                        child: _buildSidebar(recents),
+                      ),
+                    ),
                   ),
-                );
-              },
-              child: _buildChatColumn(messages),
-            ),
-            if ((_edgeOpenEnabled && !sidebarOpen) || _dragging)
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: AppSpace.xl,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onHorizontalDragStart: (_) =>
-                      _onSidebarDragStart(open: sidebarOpen),
-                  onHorizontalDragUpdate: (details) =>
-                      _onSidebarDragUpdate(details.delta.dx, panelWidth),
-                  onHorizontalDragEnd: _onSidebarDragEnd,
-                ),
+                  SingleMotionBuilder(
+                    motion: const CupertinoMotion.bouncy(),
+                    active: !_dragging,
+                    value: _dragging ? _dragT : (sidebarOpen ? 1.0 : 0.0),
+                    builder: (context, t, child) {
+                      return Transform.translate(
+                        offset: Offset(panelWidth * t, 0),
+                        child: _buildChatSheet(
+                          t: t,
+                          sidebarOpen: sidebarOpen,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: _buildChatColumn(messages),
+                  ),
+                  if ((_edgeOpenEnabled && !sidebarOpen) || _dragging)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: AppSpace.xl,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onHorizontalDragStart: (_) =>
+                            _onSidebarDragStart(open: sidebarOpen),
+                        onHorizontalDragUpdate: (details) =>
+                            _onSidebarDragUpdate(details.delta.dx, panelWidth),
+                        onHorizontalDragEnd: _onSidebarDragEnd,
+                      ),
+                    ),
+                ],
               ),
-          ],
-        ),
       ),
+    );
+  }
+
+  Widget _buildWideLayout(
+    List<ChatMessage> messages,
+    List<ChatSession> recents,
+  ) {
+    return Row(
+      children: [
+        SizedBox(width: 300, child: _buildSidebar(recents)),
+        const VerticalDivider(width: 1),
+        Expanded(child: _buildChatColumn(messages, isWide: true)),
+      ],
     );
   }
 
@@ -503,104 +522,111 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     };
   }
 
-  Widget _buildChatColumn(List<ChatMessage> messages) {
+  Widget _buildChatColumn(List<ChatMessage> messages, {bool isWide = false}) {
     final demoPhase = ref.watch(chatStoreProvider).phaseOf(_activeChatId);
     return Column(
       children: [
-        SafeArea(bottom: false, child: _buildHeader()),
+        SafeArea(bottom: false, child: _buildHeader(isWide: isWide)),
         Expanded(child: _buildMessages(messages)),
         SafeArea(
           top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpace.xs,
-              AppSpace.xs,
-              AppSpace.md,
-              AppSpace.sm,
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: AppColor.divider)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.only(
-                    left: AppSpace.sm,
-                    right: AppSpace.sm,
-                    bottom: AppSpace.sm,
+            child: Align(
+              alignment: Alignment.center,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 860),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpace.md,
+                    AppSpace.sm,
+                    AppSpace.md,
+                    AppSpace.sm,
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      DsDemoActionChip(
-                        label: 'Chẩn đoán mới',
-                        onTap: _startNewDiagnosisDemo,
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.only(bottom: AppSpace.sm),
+                        child: Row(
+                          children: [
+                            DsDemoActionChip(
+                              label: 'Chẩn đoán mới',
+                              onTap: _startNewDiagnosisDemo,
+                            ),
+                            const SizedBox(width: AppSpace.xs),
+                            DsDemoActionChip(
+                              label: 'Xu hướng',
+                              onTap: () =>
+                                  _showPlaceholder(DemoDiagnosis.trendMessage),
+                            ),
+                            const SizedBox(width: AppSpace.xs),
+                            DsDemoActionChip(
+                              label: 'Báo cáo',
+                              onTap: () =>
+                                  _showPlaceholder(DemoDiagnosis.reportMessage),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: AppSpace.xs),
-                      DsDemoActionChip(
-                        label: 'Xu hướng',
-                        onTap: () =>
-                            _showPlaceholder(DemoDiagnosis.trendMessage),
-                      ),
-                      const SizedBox(width: AppSpace.xs),
-                      DsDemoActionChip(
-                        label: 'Báo cáo',
-                        onTap: () =>
-                            _showPlaceholder(DemoDiagnosis.reportMessage),
+                      if (_voiceDrafts.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpace.sm),
+                          child: SizedBox(
+                            height: DsVoiceDraftCard.extentHeight,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              clipBehavior: Clip.none,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpace.sm,
+                              ),
+                              itemCount: _voiceDrafts.length,
+                              separatorBuilder: (context, index) =>
+                                  const SizedBox(width: AppSpace.xs),
+                              itemBuilder: (context, index) {
+                                final clip = _voiceDrafts[index];
+                                return DsVoiceDraftCard(
+                                  duration: clip.duration,
+                                  onRemove: () => _removeVoiceDraft(clip),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: DsComposer(
+                              controller: _composer,
+                              hintText: _composerHint(demoPhase),
+                              onAttach: () =>
+                                  _showPlaceholder('Attachments coming soon'),
+                              onMic: _startRecording,
+                              onSubmitted: _submit,
+                              isRecording: _recording,
+                              waveformLevels: _waveformLevels,
+                              onCancelRecording: _cancelRecording,
+                              onStopRecording: _stopRecording,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpace.xs),
+                          DsVoiceButton(
+                            enabled:
+                                _recording ||
+                                _voiceDrafts.isNotEmpty ||
+                                _composer.text.trim().isNotEmpty,
+                            onPressed: () => _submit(_composer.text),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                if (_voiceDrafts.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpace.sm),
-                    child: SizedBox(
-                      height: DsVoiceDraftCard.extentHeight,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        clipBehavior: Clip.none,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpace.sm,
-                        ),
-                        itemCount: _voiceDrafts.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(width: AppSpace.xs),
-                        itemBuilder: (context, index) {
-                          final clip = _voiceDrafts[index];
-                          return DsVoiceDraftCard(
-                            duration: clip.duration,
-                            onRemove: () => _removeVoiceDraft(clip),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: DsComposer(
-                        controller: _composer,
-                        hintText: _composerHint(demoPhase),
-                        onAttach: () =>
-                            _showPlaceholder('Attachments coming soon'),
-                        onMic: _startRecording,
-                        onSubmitted: _submit,
-                        isRecording: _recording,
-                        waveformLevels: _waveformLevels,
-                        onCancelRecording: _cancelRecording,
-                        onStopRecording: _stopRecording,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpace.xs),
-                    DsVoiceButton(
-                      enabled:
-                          _recording ||
-                          _voiceDrafts.isNotEmpty ||
-                          _composer.text.trim().isNotEmpty,
-                      onPressed: () => _submit(_composer.text),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -608,20 +634,69 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader({required bool isWide}) {
     return Padding(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpace.xs,
-        vertical: AppSpace.xxs,
+        horizontal: AppSpace.md,
+        vertical: AppSpace.sm,
       ),
       child: Row(
         children: [
-          DsIconButton(
-            icon: IconfyIcons.editor.hamburgerMenu.outline.regular,
-            tooltip: 'Menu',
-            onPressed: () => ref.read(sidebarOpenProvider.notifier).open(),
+          if (isWide)
+            const SizedBox(width: 40)
+          else
+            DsIconButton(
+              icon: IconfyIcons.editor.hamburgerMenu.outline.regular,
+              tooltip: 'Menu',
+              onPressed: () => ref.read(sidebarOpenProvider.notifier).open(),
+            ),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: isWide
+                  ? MainAxisAlignment.start
+                  : MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: const BoxDecoration(
+                    color: AppColor.accentSoft,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.health_and_safety_outlined,
+                    color: AppColor.accentVoice,
+                    size: 19,
+                  ),
+                ),
+                const SizedBox(width: AppSpace.xs),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('VNCoughAlert', style: AppTextStyle.label()),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: AppColor.accentSuccess,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpace.xxs),
+                        Text(
+                          'Trợ lý sức khỏe hô hấp',
+                          style: AppTextStyle.caption(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          const Spacer(),
           DsIconButton(
             icon: IconfyIcons.essential.editSquare.outline.regular,
             tooltip: 'New chat',
@@ -645,15 +720,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   Widget _buildMessages(List<ChatMessage> messages) {
     if (messages.isEmpty) {
-      return const SizedBox.expand();
+      return _buildEmptyState();
     }
     return Stack(
       children: [
         ListView.builder(
           controller: _scroll,
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSpace.md,
-            vertical: AppSpace.sm,
+            horizontal: AppSpace.lg,
+            vertical: AppSpace.md,
           ),
           itemCount: messages.length,
           itemBuilder: (context, index) {
@@ -712,6 +787,72 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
+  Widget _buildEmptyState() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.lg,
+          AppSpace.xl,
+          AppSpace.lg,
+          AppSpace.md,
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 620),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: const BoxDecoration(
+                  color: AppColor.accentSoft,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.health_and_safety_outlined,
+                  color: AppColor.accentVoice,
+                  size: 38,
+                ),
+              ),
+              const SizedBox(height: AppSpace.lg),
+              Text(
+                'Bạn đang lo về triệu chứng hô hấp?',
+                textAlign: TextAlign.center,
+                style: AppTextStyle.display(),
+              ),
+              const SizedBox(height: AppSpace.sm),
+              Text(
+                'Mô tả điều bạn đang gặp phải. Mình sẽ giúp bạn sắp xếp thông tin và gợi ý bước tiếp theo.',
+                textAlign: TextAlign.center,
+                style: AppTextStyle.bodySm(),
+              ),
+              const SizedBox(height: AppSpace.lg),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: AppSpace.xs,
+                runSpacing: AppSpace.xs,
+                children: [
+                  _SuggestionChip(
+                    label: 'Ho kéo dài bao lâu thì cần khám?',
+                    onTap: () => _submit('Ho kéo dài bao lâu thì cần khám?'),
+                  ),
+                  _SuggestionChip(
+                    label: 'Phân biệt cảm lạnh và cúm',
+                    onTap: () => _submit('Phân biệt cảm lạnh và cúm'),
+                  ),
+                  _SuggestionChip(
+                    label: 'Cách theo dõi triệu chứng',
+                    onTap: () => _submit('Cách theo dõi triệu chứng'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSidebar(List<ChatSession> recents) {
     return DsSidebarPanel(
       title: 'VNCoughAlert',
@@ -755,6 +896,56 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             },
           ),
       ],
+      footer: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: const BoxDecoration(
+              color: AppColor.accentTint,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.person_outline,
+              color: AppColor.accentVoice,
+              size: 19,
+            ),
+          ),
+          const SizedBox(width: AppSpace.sm),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Guest', style: AppTextStyle.label()),
+              Text('Mock workspace', style: AppTextStyle.caption()),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuggestionChip extends StatelessWidget {
+  const _SuggestionChip({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      onPressed: onTap,
+      label: Text(label),
+      labelStyle: AppTextStyle.label(color: AppColor.accentVoice),
+      backgroundColor: AppColor.accentTint,
+      side: const BorderSide(color: AppColor.border),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.xs,
+        vertical: AppSpace.xxs,
+      ),
     );
   }
 }

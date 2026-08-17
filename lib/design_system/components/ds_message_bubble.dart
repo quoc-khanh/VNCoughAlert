@@ -66,6 +66,7 @@ class _DsMessageBubbleState extends State<DsMessageBubble> {
     final align = isUser ? Alignment.centerRight : Alignment.centerLeft;
     final color = isUser ? AppColor.userBubble : AppColor.assistantBubble;
     final shape = AppRadius.superellipse(AppRadius.bubble);
+    final textColor = isUser ? AppColor.textOnAccent : AppColor.textHigh;
 
     return Align(
       alignment: align,
@@ -93,30 +94,68 @@ class _DsMessageBubbleState extends State<DsMessageBubble> {
         },
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.sizeOf(context).width * 0.82,
+            maxWidth:
+                MediaQuery.sizeOf(context).width.clamp(0.0, 880.0).toDouble() *
+                0.78,
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpace.xxs),
-            child: Material(
-              color: color,
-              shape: shape,
-              clipBehavior: Clip.antiAlias,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpace.md,
-                  vertical: AppSpace.sm,
-                ),
-                child: widget.isPending && widget.text.trim().isEmpty
-                    ? const DsTypingDots()
-                    : _MessageBody(
-                        role: widget.role,
-                        text: widget.text,
-                        audios: widget.audios,
-                        diagnoses: widget.diagnoses,
-                        onCaseStudy: widget.onCaseStudy,
-                        onConnectDoctor: widget.onConnectDoctor,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (!isUser) ...[
+                  Container(
+                    width: 26,
+                    height: 26,
+                    margin: const EdgeInsets.only(right: AppSpace.xs),
+                    decoration: const BoxDecoration(
+                      color: AppColor.accentSoft,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'V',
+                        style: TextStyle(
+                          color: AppColor.accentVoice,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-              ),
+                    ),
+                  ),
+                ],
+                Flexible(
+                  child: Material(
+                    color: color,
+                    shape: shape,
+                    clipBehavior: Clip.antiAlias,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: isUser
+                            ? null
+                            : Border.all(color: AppColor.border),
+                        borderRadius: BorderRadius.circular(AppRadius.bubble),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpace.md,
+                        vertical: AppSpace.sm,
+                      ),
+                      child: widget.isPending && widget.text.trim().isEmpty
+                          ? const DsTypingDots()
+                          : _MessageBody(
+                              role: widget.role,
+                              text: widget.text,
+                              textColor: textColor,
+                              audios: widget.audios,
+                              diagnoses: widget.diagnoses,
+                              onCaseStudy: widget.onCaseStudy,
+                              onConnectDoctor: widget.onConnectDoctor,
+                            ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -129,6 +168,7 @@ class _MessageBody extends StatelessWidget {
   const _MessageBody({
     required this.role,
     required this.text,
+    required this.textColor,
     required this.audios,
     required this.diagnoses,
     this.onCaseStudy,
@@ -137,6 +177,7 @@ class _MessageBody extends StatelessWidget {
 
   final DsMessageRole role;
   final String text;
+  final Color textColor;
   final List<DsVoiceAttachment> audios;
   final List<DsDiagnosisSummary> diagnoses;
   final VoidCallback? onCaseStudy;
@@ -162,7 +203,7 @@ class _MessageBody extends StatelessWidget {
         if (hasText)
           isAssistant
               ? DsMarkdownBody(data: text)
-              : Text(text, style: AppTextStyle.body()),
+              : Text(text, style: AppTextStyle.body(color: textColor)),
         if (isAssistant && diagnoses.isNotEmpty) ...[
           if (hasText) const SizedBox(height: AppSpace.sm),
           for (var i = 0; i < diagnoses.length; i++) ...[

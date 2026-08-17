@@ -50,49 +50,67 @@ class DsComposer extends StatelessWidget {
         DsIconButton(
           icon: IconfyIcons.essential.plus.outline.regular,
           tooltip: 'Attach',
+          size: 38,
           onPressed: enabled ? onAttach : null,
         ),
         Expanded(
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
+          child: DecoratedBox(
             decoration: BoxDecoration(
-              color: AppColor.composerFill,
-              borderRadius: BorderRadius.circular(AppRadius.pill),
+              color: AppColor.canvas,
+              borderRadius: BorderRadius.circular(AppRadius.bubble),
+              border: Border.all(color: AppColor.border),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0D1B3454),
+                  blurRadius: 18,
+                  offset: Offset(0, 5),
+                ),
+              ],
             ),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpace.sm),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    enabled: enabled,
-                    minLines: 1,
-                    maxLines: 5,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: onSubmitted,
-                    style: AppTextStyle.body(),
-                    cursorColor: AppColor.accentVoice,
-                    decoration: InputDecoration(
-                      hintText: hintText,
-                      hintStyle: AppTextStyle.body(
-                        color: AppColor.textPlaceholder,
-                      ),
-                      border: InputBorder.none,
-                      isCollapsed: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: AppSpace.sm,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.xs,
+                AppSpace.xxs,
+                AppSpace.xs,
+                AppSpace.xxs,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      enabled: enabled,
+                      minLines: 1,
+                      maxLines: 5,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: onSubmitted,
+                      style: AppTextStyle.body(),
+                      cursorColor: AppColor.accentVoice,
+                      decoration: InputDecoration(
+                        hintText: hintText,
+                        hintStyle: AppTextStyle.body(
+                          color: AppColor.textPlaceholder,
+                        ),
+                        border: InputBorder.none,
+                        isCollapsed: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpace.xs,
+                          vertical: AppSpace.sm,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                DsIconButton(
-                  icon: IconfyIcons.ai.voiceWaveAi.light.regular,
-                  tooltip: 'Voice input',
-                  iconSize: 22,
-                  onPressed: enabled ? onMic : null,
-                ),
-              ],
+                  DsIconButton(
+                    icon: IconfyIcons.ai.voiceWaveAi.light.regular,
+                    tooltip: 'Voice input',
+                    iconSize: 21,
+                    size: 38,
+                    onPressed: enabled ? onMic : null,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

@@ -18,6 +18,16 @@ abstract final class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColor.canvas,
       splashFactory: InkRipple.splashFactory,
+      visualDensity: VisualDensity.standard,
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColor.textHigh,
+        contentTextStyle: AppTextStyle.body(color: AppColor.textOnAccent),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        hintStyle: AppTextStyle.body(color: AppColor.textPlaceholder),
+      ),
       appBarTheme: const AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 0,

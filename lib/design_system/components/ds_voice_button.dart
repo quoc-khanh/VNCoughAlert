@@ -14,20 +14,26 @@ class DsVoiceButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColor.accentVoice,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: enabled ? onPressed : null,
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Center(
-            child: IconfyIconWidget(
-              IconfyIcons.message.sendMessage3.bold.regular,
-              color: AppColor.iconOnAccent,
-              size: 22,
+    final color = enabled ? AppColor.accentVoice : AppColor.composerFill;
+    return Semantics(
+      button: true,
+      label: enabled ? 'Send message' : 'Send message disabled',
+      child: Material(
+        color: color,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: enabled ? onPressed : null,
+          splashColor: AppColor.accentVoicePressed,
+          child: SizedBox(
+            width: 50,
+            height: 50,
+            child: Center(
+              child: IconfyIconWidget(
+                IconfyIcons.message.sendMessage3.bold.regular,
+                color: enabled ? AppColor.iconOnAccent : AppColor.iconMuted,
+                size: 22,
+              ),
             ),
           ),
         ),

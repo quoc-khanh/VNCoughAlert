@@ -93,8 +93,19 @@ class DsSidebarNavItem extends StatelessWidget {
     return ListTile(
       dense: true,
       selected: selected,
-      leading: IconfyIconWidget(icon, color: AppColor.iconDefault, size: 22),
-      title: Text(label, style: AppTextStyle.body()),
+      selectedTileColor: AppColor.accentSoft,
+      selectedColor: AppColor.accentVoice,
+      leading: IconfyIconWidget(
+        icon,
+        color: selected ? AppColor.accentVoice : AppColor.iconDefault,
+        size: 22,
+      ),
+      title: Text(
+        label,
+        style: AppTextStyle.label(
+          color: selected ? AppColor.accentVoice : AppColor.textHigh,
+        ),
+      ),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.md),
       shape: RoundedRectangleBorder(
@@ -121,12 +132,14 @@ class DsRecentRow extends StatelessWidget {
     return ListTile(
       dense: true,
       selected: selected,
-      selectedTileColor: AppColor.composerFill,
+      selectedTileColor: AppColor.canvas,
       title: Text(
         title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: AppTextStyle.body(),
+        style: AppTextStyle.bodySm(
+          color: selected ? AppColor.textHigh : AppColor.textMedium,
+        ),
       ),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.md),
@@ -147,6 +160,7 @@ class DsSidebarPanel extends StatefulWidget {
     required this.navItems,
     required this.recentsLabel,
     required this.recents,
+    this.footer,
   });
 
   final String title;
@@ -156,6 +170,7 @@ class DsSidebarPanel extends StatefulWidget {
   final List<Widget> navItems;
   final String recentsLabel;
   final List<Widget> recents;
+  final Widget? footer;
 
   @override
   State<DsSidebarPanel> createState() => _DsSidebarPanelState();
@@ -211,6 +226,20 @@ class _DsSidebarPanelState extends State<DsSidebarPanel> {
                   final hideTitle = 1 - progress;
                   return Row(
                     children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: const BoxDecoration(
+                          color: AppColor.accentVoice,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.health_and_safety_outlined,
+                          color: AppColor.iconOnAccent,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpace.sm),
                       ClipRect(
                         child: Align(
                           alignment: Alignment.centerLeft,
@@ -225,7 +254,7 @@ class _DsSidebarPanelState extends State<DsSidebarPanel> {
                                 widget.title,
                                 maxLines: 1,
                                 softWrap: false,
-                                style: AppTextStyle.titleMd(),
+                                style: AppTextStyle.titleSm(),
                               ),
                             ),
                           ),
@@ -286,6 +315,16 @@ class _DsSidebarPanelState extends State<DsSidebarPanel> {
                 children: widget.recents,
               ),
             ),
+            if (widget.footer != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpace.md,
+                  AppSpace.xs,
+                  AppSpace.md,
+                  AppSpace.lg,
+                ),
+                child: widget.footer,
+              ),
           ],
         ),
       ),

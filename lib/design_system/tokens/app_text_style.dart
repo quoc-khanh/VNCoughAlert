@@ -20,12 +20,31 @@ abstract final class AppTextStyle {
     );
   }
 
+  static TextStyle display({Color? color}) {
+    return TextStyle(
+      fontSize: 28,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.5,
+      height: 1.15,
+      color: color ?? AppColor.textHigh,
+    );
+  }
+
   static TextStyle body({Color? color}) {
     return TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
       height: 1.4,
       color: color ?? AppColor.textHigh,
+    );
+  }
+
+  static TextStyle bodySm({Color? color}) {
+    return TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w400,
+      height: 1.45,
+      color: color ?? AppColor.textMedium,
     );
   }
 
