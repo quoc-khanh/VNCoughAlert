@@ -6,8 +6,6 @@ import 'package:iconfy_icon/iconfy_icon.dart';
 import 'package:motor/motor.dart';
 import 'package:vncoughalert/design_system/design_system.dart';
 import 'package:vncoughalert/features/chat/data/voice_recorder.dart';
-import 'package:vncoughalert/features/chat/data/demo_diagnosis.dart';
-import 'package:vncoughalert/features/chat/domain/models/diagnosis_models.dart';
 import 'package:vncoughalert/features/chat/domain/models/chat_models.dart';
 import 'package:vncoughalert/features/chat/providers/chat_providers.dart';
 
@@ -41,7 +39,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   var _recording = false;
   final List<VoiceClip> _voiceDrafts = [];
   List<double> _waveformLevels = const [];
-  Timer? _demoRecordTimer;
 
   static const _flingVelocity = 700.0;
   static const _showJumpPixels = 64.0;
@@ -60,7 +57,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _search.dispose();
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
-    _demoRecordTimer?.cancel();
     _amplitudeSub?.cancel();
     _recorder.dispose();
     super.dispose();
@@ -201,69 +197,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
-  String? get _activeChatId => widget.chatId ?? _draftChatId;
-
-  DiagnosisDemoPhase get _demoPhase =>
-      ref.read(chatStoreProvider).phaseOf(_activeChatId);
-
-  List<DsDiagnosisSummary> _mapDiagnoses(List<DiagnosisResult> items) {
-    return [
-      for (final item in items)
-        DsDiagnosisSummary(
-          title: item.name,
-          subtitle: item.nameEn,
-          severityLabel: item.severityLabel,
-          confidencePercent: item.confidencePercent,
-          summary: item.summary,
-          matchedSymptoms: item.matchedSymptoms,
-          recommendations: item.recommendations,
-        ),
-    ];
-  }
-
-  void _showCaseStudy() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(AppSpace.md),
-          child: DsMarkdownBody(data: DemoDiagnosis.caseStudyBody),
-        );
-      },
-    );
-  }
-
-  Future<void> _startNewDiagnosisDemo() async {
-    await _cancelRecording();
-    await _clearVoiceDrafts();
-    final chatId = ref.read(chatStoreProvider.notifier).newChatId();
-    if (!mounted) return;
-    setState(() {
-      _draftChatId = chatId;
-      _composer.clear();
-      _atLatest = true;
-    });
-    widget.onNewChat();
-    await ref.read(chatStoreProvider.notifier).startDiagnosisDemo(chatId);
-    if (!mounted) return;
-    _scheduleStickToLatest(animate: true);
-  }
-
-  Future<void> _submitDemoCoughRecording() async {
-    _demoRecordTimer?.cancel();
-    await _amplitudeSub?.cancel();
-    _amplitudeSub = null;
-    final clip = await _recorder.stop();
-    if (!mounted) return;
-    setState(() {
-      _recording = false;
-      _waveformLevels = const [];
-    });
-    if (clip == null) return;
-    await _submit('', forceClips: [clip]);
-  }
-
   void _showPlaceholder(String message) {
     ScaffoldMessenger.of(
       context,
@@ -273,7 +206,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Future<void> _submit(String raw, {List<VoiceClip>? forceClips}) async {
     final clips = forceClips ?? List<VoiceClip>.from(_voiceDrafts);
     if (_recording) {
-      _demoRecordTimer?.cancel();
       _amplitudeSub?.cancel();
       _amplitudeSub = null;
       final clip = await _recorder.stop();
@@ -346,7 +278,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _recording = true;
       _waveformLevels = const [];
     });
-    _demoRecordTimer?.cancel();
     _amplitudeSub?.cancel();
     _amplitudeSub = _recorder.amplitudes.listen((_) {
       if (!mounted || !_recording) {
@@ -354,20 +285,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       }
       setState(() => _waveformLevels = _recorder.levels);
     });
-    if (_demoPhase == DiagnosisDemoPhase.waitingCough) {
-      _demoRecordTimer = Timer(const Duration(seconds: 5), () {
-        if (mounted && _recording) {
-          unawaited(_submitDemoCoughRecording());
-        }
-      });
-    }
   }
 
   Future<void> _stopRecording() async {
     if (!_recording) {
       return;
     }
-    _demoRecordTimer?.cancel();
     _amplitudeSub?.cancel();
     _amplitudeSub = null;
     final clip = await _recorder.stop();
@@ -384,7 +307,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Future<void> _cancelRecording() async {
-    _demoRecordTimer?.cancel();
     if (!_recording) {
       return;
     }
@@ -512,18 +434,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     );
   }
 
-  String _composerHint(DiagnosisDemoPhase phase) {
-    return switch (phase) {
-      DiagnosisDemoPhase.waitingIntake => 'Nhập triệu chứng…',
-      DiagnosisDemoPhase.waitingCough => 'Ghi âm tiếng ho…',
-      DiagnosisDemoPhase.idle ||
-      DiagnosisDemoPhase.analyzing ||
-      DiagnosisDemoPhase.done => 'Nhập tin nhắn...',
-    };
-  }
-
   Widget _buildChatColumn(List<ChatMessage> messages, {bool isWide = false}) {
-    final demoPhase = ref.watch(chatStoreProvider).phaseOf(_activeChatId);
     return Column(
       children: [
         Container(
@@ -557,35 +468,39 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         child: Row(
                           children: [
                             DsDemoActionChip(
-                              label: 'Chẩn đoán mới',
+                              label: 'Mô tả triệu chứng',
                               icon: const Icon(
                                 Icons.health_and_safety_outlined,
                                 size: 16,
                                 color: AppColor.accentVoice,
                               ),
-                              onTap: _startNewDiagnosisDemo,
+                              onTap: () => _submit(
+                                'Tôi muốn mô tả triệu chứng hô hấp của mình.',
+                              ),
                             ),
                             const SizedBox(width: AppSpace.xs),
                             DsDemoActionChip(
-                              label: 'Xu hướng',
+                              label: 'Hỏi về ho',
                               icon: const Icon(
                                 Icons.trending_up_rounded,
                                 size: 16,
                                 color: AppColor.accentVoice,
                               ),
-                              onTap: () =>
-                                  _showPlaceholder(DemoDiagnosis.trendMessage),
+                              onTap: () => _submit(
+                                'Ho kéo dài bao lâu thì cần đi khám?',
+                              ),
                             ),
                             const SizedBox(width: AppSpace.xs),
                             DsDemoActionChip(
-                              label: 'Báo cáo',
+                              label: 'Theo dõi sức khỏe',
                               icon: const Icon(
                                 Icons.description_outlined,
                                 size: 16,
                                 color: AppColor.accentVoice,
                               ),
-                              onTap: () =>
-                                  _showPlaceholder(DemoDiagnosis.reportMessage),
+                              onTap: () => _submit(
+                                'Tôi nên theo dõi những dấu hiệu sức khỏe nào?',
+                              ),
                             ),
                           ],
                         ),
@@ -620,7 +535,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           Expanded(
                             child: DsComposer(
                               controller: _composer,
-                              hintText: _composerHint(demoPhase),
+                              hintText: 'Nhập tin nhắn...',
                               onAttach: () =>
                                   _showPlaceholder('Attachments coming soon'),
                               onMic: _startRecording,
@@ -798,11 +713,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   : DsMessageRole.assistant,
               text: message.text,
               isPending: message.isPending,
-              diagnoses: _mapDiagnoses(message.diagnoses),
-              onCaseStudy: message.diagnoses.isEmpty ? null : _showCaseStudy,
-              onConnectDoctor: message.diagnoses.isEmpty
-                  ? null
-                  : () => _showPlaceholder(DemoDiagnosis.connectDoctorMessage),
               audios: [
                 for (final audio in message.audios)
                   DsVoiceAttachment(

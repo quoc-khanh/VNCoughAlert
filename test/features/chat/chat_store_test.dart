@@ -127,68 +127,15 @@ void main() {
     expect(messages.last.text, MistralChatConfig.requestFailedMessage);
   });
 
-  test('diagnosis demo returns structured results without LLM', () async {
+  test('every chat message, including voice placeholders, uses Mistral', () async {
     final id = store.newChatId();
-    await store.startDiagnosisDemo(id);
-    expect(state().phaseOf(id), DiagnosisDemoPhase.waitingIntake);
-
-    await store.send(chatId: id, text: '45 tuổi, hen suyễn, ho đờm 2 tuần');
-    expect(state().phaseOf(id), DiagnosisDemoPhase.waitingCough);
-
     await store.send(
       chatId: id,
-      text: '',
+      text: 'Tôi bị ho và khó thở nhẹ.',
       audios: [
         ChatAudio(path: '/tmp/demo.m4a', duration: Duration(seconds: 5)),
       ],
     );
-
-    final messages = state().messagesOf(id);
-    expect(messages.last.diagnoses, isNotEmpty);
-    expect(messages.last.diagnoses.first.name, 'Viêm phế quản');
-    expect(state().phaseOf(id), DiagnosisDemoPhase.done);
-  });
-
-  test('send during analyzing does not call the LLM', () async {
-    final id = store.newChatId();
-    await store.startDiagnosisDemo(id);
-    await store.send(chatId: id, text: '45 tuổi, hen suyễn, ho đờm 2 tuần');
-
-    final analyzing = store.send(
-      chatId: id,
-      text: '',
-      audios: [
-        ChatAudio(path: '/tmp/demo.m4a', duration: Duration(seconds: 5)),
-      ],
-    );
-
-    expect(state().phaseOf(id), DiagnosisDemoPhase.analyzing);
-    final countDuringAnalyze = state().messagesOf(id).length;
-
-    await store.send(chatId: id, text: 'ignored while analyzing');
-
-    expect(llm.lastMessages, isNull);
-    expect(state().messagesOf(id), hasLength(countDuringAnalyze));
-
-    await analyzing;
-    expect(state().phaseOf(id), DiagnosisDemoPhase.done);
-    expect(llm.lastMessages, isNull);
-  });
-
-  test('after diagnosis demo, follow-up send uses Mistral', () async {
-    final id = store.newChatId();
-    await store.startDiagnosisDemo(id);
-    await store.send(chatId: id, text: '45 tuổi, hen suyễn, ho đờm 2 tuần');
-    await store.send(
-      chatId: id,
-      text: '',
-      audios: [
-        ChatAudio(path: '/tmp/demo.m4a', duration: Duration(seconds: 5)),
-      ],
-    );
-    expect(state().phaseOf(id), DiagnosisDemoPhase.done);
-
-    await store.send(chatId: id, text: 'Tôi nên uống thuốc gì?');
 
     final messages = state().messagesOf(id);
     expect(messages.last.isPending, isFalse);

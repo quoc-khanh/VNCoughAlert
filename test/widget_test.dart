@@ -16,7 +16,7 @@ class _WidgetFakeLlm implements ChatLlmClient {
     await Future<void>.delayed(const Duration(milliseconds: 600));
     final lastUser = messages.reversed.firstWhere((m) => m.role == 'user');
     final content = lastUser.toJson()['content'] as String;
-    yield 'Đây là phản hồi mẫu (mock) cho: "$content"';
+    yield 'Mistral test reply for: "$content"';
   }
 }
 
@@ -82,10 +82,10 @@ void main() {
 
     expect(find.text('Gần đây'), findsOneWidget);
     expect(find.text('Thông tin sức khỏe'), findsOneWidget);
-    expect(find.text('Ho khan kéo dài 2 tuần'), findsOneWidget);
+    expect(find.byType(DsRecentRow), findsNothing);
   });
 
-  testWidgets('first send stays on this screen with user then mock reply', (
+  testWidgets('first send stays on this screen with user then API reply', (
     tester,
   ) async {
     await pumpApp(tester);
@@ -101,7 +101,7 @@ void main() {
 
     expect(find.byType(DsTypingDots), findsNothing);
     expect(
-      bubbleText('Đây là phản hồi mẫu (mock) cho: "Unique ping 42"'),
+      bubbleText('Mistral test reply for: "Unique ping 42"'),
       findsOneWidget,
     );
     expect(find.text('Nhập tin nhắn...'), findsOneWidget);
@@ -137,12 +137,12 @@ void main() {
     expect(recentText('Keep this thread'), findsOneWidget);
 
     await openSidebar(tester);
-    expect(find.byType(DsRecentRow), findsNWidgets(5));
+    expect(find.byType(DsRecentRow), findsOneWidget);
     await tapRecent(tester, 'Keep this thread');
 
     expect(bubbleText('Keep this thread'), findsOneWidget);
     expect(
-      bubbleText('Đây là phản hồi mẫu (mock) cho: "Keep this thread"'),
+      bubbleText('Mistral test reply for: "Keep this thread"'),
       findsOneWidget,
     );
   });
@@ -154,7 +154,7 @@ void main() {
     await tester.tap(find.byTooltip('Cuộc trò chuyện mới'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(DsRecentRow), findsNWidgets(4));
+    expect(find.byType(DsRecentRow), findsNothing);
   });
 
   testWidgets('new chat during pending still saves the reply', (tester) async {
@@ -178,7 +178,7 @@ void main() {
 
     expect(bubbleText('Pending then new'), findsOneWidget);
     expect(
-      bubbleText('Đây là phản hồi mẫu (mock) cho: "Pending then new"'),
+      bubbleText('Mistral test reply for: "Pending then new"'),
       findsOneWidget,
     );
   });
@@ -196,30 +196,29 @@ void main() {
 
     expect(bubbleText('Stay on draft'), findsOneWidget);
     expect(
-      bubbleText('Đây là phản hồi mẫu (mock) cho: "Stay on draft"'),
+      bubbleText('Mistral test reply for: "Stay on draft"'),
       findsOneWidget,
     );
     expect(find.text('Nhập tin nhắn...'), findsOneWidget);
   });
 
-  testWidgets('new chat after opening a seed then send keeps the seed', (
+  testWidgets('new chat after sending keeps the previous API chat', (
     tester,
   ) async {
     await pumpApp(tester);
-    await openSidebar(tester);
-    await tapRecent(tester, 'Khó thở nhẹ buổi tối');
-
-    expect(bubbleText('Khó thở nhẹ buổi tối'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('Cuộc trò chuyện mới'));
-    await tester.pumpAndSettle();
     await sendComposer(tester, 'Brand new thread');
     await tester.pump(const Duration(milliseconds: 600));
     await tester.pump();
 
+    await tester.tap(find.byTooltip('Cuộc trò chuyện mới'));
+    await tester.pumpAndSettle();
+    await sendComposer(tester, 'Second API thread');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump();
+
     await openSidebar(tester);
-    expect(recentText('Khó thở nhẹ buổi tối'), findsOneWidget);
     expect(recentText('Brand new thread'), findsOneWidget);
-    expect(bubbleText('Brand new thread'), findsOneWidget);
+    expect(recentText('Second API thread'), findsOneWidget);
+    expect(bubbleText('Second API thread'), findsOneWidget);
   });
 }

@@ -2,10 +2,6 @@ import 'package:vncoughalert/features/chat/domain/models/chat_models.dart';
 import 'package:vncoughalert/features/chat/domain/models/diagnosis_models.dart';
 
 class MockChatRepository {
-  MockChatRepository() {
-    _seed();
-  }
-
   final List<ChatSession> _sessions = [];
   final Map<String, List<ChatMessage>> _messages = {};
   int _seq = 0;
@@ -155,10 +151,6 @@ class MockChatRepository {
     );
   }
 
-  String cannedReply(String userText) {
-    return 'Đây là phản hồi mẫu (mock) cho: "$userText"';
-  }
-
   void _sort() {
     _sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
@@ -171,36 +163,4 @@ class MockChatRepository {
     return '${trimmed.substring(0, 42)}…';
   }
 
-  void _seed() {
-    final now = DateTime.now();
-    const seeds = [
-      ('s1', 'Ho khan kéo dài 2 tuần'),
-      ('s2', 'Khó thở nhẹ buổi tối'),
-      ('s3', 'Hen suyễn tái phát mùa lạnh'),
-      ('s4', 'Ho có đờm sau cảm cúm'),
-    ];
-    for (final (id, title) in seeds) {
-      _sessions.add(
-        ChatSession(
-          id: id,
-          title: title,
-          updatedAt: now.subtract(Duration(minutes: _sessions.length * 12)),
-        ),
-      );
-      _messages[id] = [
-        ChatMessage(
-          id: '${id}_u',
-          role: ChatRole.user,
-          text: title,
-          createdAt: now,
-        ),
-        ChatMessage(
-          id: '${id}_a',
-          role: ChatRole.assistant,
-          text: cannedReply(title),
-          createdAt: now,
-        ),
-      ];
-    }
-  }
 }

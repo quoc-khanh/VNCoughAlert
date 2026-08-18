@@ -46,3 +46,6 @@ app.*.map.json
 
 # Local Flutter and Android SDK toolchains
 /.tooling/
+
+# Local secrets
+.env
