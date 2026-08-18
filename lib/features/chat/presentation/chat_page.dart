@@ -39,10 +39,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   StreamSubscription<double>? _amplitudeSub;
   var _recording = false;
   final List<VoiceClip> _voiceDrafts = [];
-  List<double> _waveformLevels = const [];
+  final ValueNotifier<List<double>> _waveformLevels = ValueNotifier(const []);
   Timer? _recordingTimer;
   DateTime? _recordingStartedAt;
-  Duration _recordingElapsed = Duration.zero;
+  final ValueNotifier<Duration> _recordingElapsed = ValueNotifier(
+    Duration.zero,
+  );
 
   static const _flingVelocity = 700.0;
   static const _showJumpPixels = 64.0;
@@ -52,7 +54,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   @override
   void initState() {
     super.initState();
-    _composer.addListener(() => setState(() {}));
     _scroll.addListener(_onScroll);
   }
 
@@ -64,6 +65,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _scroll.dispose();
     _recordingTimer?.cancel();
     _amplitudeSub?.cancel();
+    _waveformLevels.dispose();
+    _recordingElapsed.dispose();
     _recorder.dispose();
     super.dispose();
   }
@@ -316,8 +319,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     setState(() {
       _recording = false;
       _recordingStartedAt = null;
-      _recordingElapsed = Duration.zero;
-      _waveformLevels = const [];
+      _recordingElapsed.value = Duration.zero;
+      _waveformLevels.value = const [];
     });
     return clip;
   }
@@ -368,15 +371,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     setState(() {
       _recording = true;
       _recordingStartedAt = DateTime.now();
-      _recordingElapsed = Duration.zero;
-      _waveformLevels = const [];
+      _recordingElapsed.value = Duration.zero;
+      _waveformLevels.value = const [];
     });
     _amplitudeSub?.cancel();
     _amplitudeSub = _recorder.amplitudes.listen((_) {
       if (!mounted || !_recording) {
         return;
       }
-      setState(() => _waveformLevels = _recorder.levels);
+      _waveformLevels.value = List<double>.from(_recorder.levels);
     });
     _recordingTimer?.cancel();
     _recordingTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
@@ -388,7 +391,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         return;
       }
       final elapsed = DateTime.now().difference(startedAt);
-      setState(() => _recordingElapsed = elapsed);
+      _recordingElapsed.value = elapsed;
       if (elapsed >= _maxRecordingDuration) {
         _recordingTimer?.cancel();
         _recordingTimer = null;
@@ -409,7 +412,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       if (clip != null) {
         _voiceDrafts.add(clip);
       }
-      _waveformLevels = const [];
+      _waveformLevels.value = const [];
     });
   }
 
@@ -428,8 +431,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     setState(() {
       _recording = false;
       _recordingStartedAt = null;
-      _recordingElapsed = Duration.zero;
-      _waveformLevels = const [];
+      _recordingElapsed.value = Duration.zero;
+      _waveformLevels.value = const [];
     });
   }
 
@@ -480,7 +483,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           },
           child: Scaffold(
             backgroundColor: AppColor.sidebar,
-            resizeToAvoidBottomInset: isWide || !sidebarOpen,
+            resizeToAvoidBottomInset: true,
             body: isWide
                 ? _buildWideLayout(messages, recents)
                 : Stack(
@@ -550,6 +553,31 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         const VerticalDivider(width: 1),
         Expanded(child: _buildChatColumn(messages, isWide: true)),
       ],
+    );
+  }
+
+  Widget _buildComposer() {
+    return ValueListenableBuilder<Duration>(
+      valueListenable: _recordingElapsed,
+      builder: (context, elapsed, child) {
+        return ValueListenableBuilder<List<double>>(
+          valueListenable: _waveformLevels,
+          builder: (context, levels, child) {
+            return DsComposer(
+              controller: _composer,
+              hintText: 'Nhập tin nhắn...',
+              onAttach: () => _showPlaceholder('Attachments coming soon'),
+              onMic: _startRecording,
+              onSubmitted: _submit,
+              isRecording: _recording,
+              waveformLevels: levels,
+              recordingElapsed: elapsed,
+              onCancelRecording: _cancelRecording,
+              onStopRecording: _stopRecording,
+            );
+          },
+        );
+      },
     );
   }
 
@@ -675,28 +703,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Expanded(
-                            child: DsComposer(
-                              controller: _composer,
-                              hintText: 'Nhập tin nhắn...',
-                              onAttach: () =>
-                                  _showPlaceholder('Attachments coming soon'),
-                              onMic: _startRecording,
-                              onSubmitted: _submit,
-                              isRecording: _recording,
-                              waveformLevels: _waveformLevels,
-                              recordingElapsed: _recordingElapsed,
-                              onCancelRecording: _cancelRecording,
-                              onStopRecording: _stopRecording,
-                            ),
-                          ),
+                          Expanded(child: _buildComposer()),
                           const SizedBox(width: AppSpace.xs),
-                          DsVoiceButton(
-                            enabled:
-                                _recording ||
-                                _voiceDrafts.isNotEmpty ||
-                                _composer.text.trim().isNotEmpty,
-                            onPressed: () => _submit(_composer.text),
+                          ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _composer,
+                            builder: (context, value, child) {
+                              return DsVoiceButton(
+                                enabled:
+                                    _recording ||
+                                    _voiceDrafts.isNotEmpty ||
+                                    value.text.trim().isNotEmpty,
+                                onPressed: () => _submit(value.text),
+                              );
+                            },
                           ),
                         ],
                       ),

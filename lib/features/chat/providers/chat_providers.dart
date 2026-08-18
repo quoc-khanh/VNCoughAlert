@@ -66,6 +66,7 @@ class ChatStore extends Notifier<ChatStoreState> {
 
     final history = mapChatHistory(_repo.messagesOf(chatId));
     final buffer = StringBuffer();
+    final syncClock = Stopwatch()..start();
     try {
       await for (final token in _llm.stream(history)) {
         if (token.isEmpty) {
@@ -77,7 +78,10 @@ class ChatStore extends Notifier<ChatStoreState> {
           messageId: pending.id,
           text: buffer.toString(),
         );
-        _sync();
+        if (syncClock.elapsedMilliseconds >= 50) {
+          _sync();
+          syncClock.reset();
+        }
       }
       final reply = buffer.toString().trim();
       if (reply.isEmpty) {
