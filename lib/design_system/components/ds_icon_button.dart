@@ -11,6 +11,7 @@ class DsIconButton extends StatelessWidget {
     this.tooltip,
     this.size = 40,
     this.iconSize = 22,
+    this.iconColor,
   });
 
   final IconfyIconData icon;
@@ -18,6 +19,7 @@ class DsIconButton extends StatelessWidget {
   final String? tooltip;
   final double size;
   final double iconSize;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +32,9 @@ class DsIconButton extends StatelessWidget {
         icon: IconfyIconWidget(
           icon,
           size: iconSize,
-          color: onPressed == null ? AppColor.iconMuted : AppColor.iconDefault,
+          color: onPressed == null
+              ? AppColor.iconMuted
+              : (iconColor ?? AppColor.iconDefault),
         ),
       ),
     );

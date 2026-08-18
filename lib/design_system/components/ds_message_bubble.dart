@@ -110,14 +110,14 @@ class _DsMessageBubbleState extends State<DsMessageBubble> {
                     height: 26,
                     margin: const EdgeInsets.only(right: AppSpace.xs),
                     decoration: const BoxDecoration(
-                      color: AppColor.accentSoft,
+                      color: AppColor.accentVoice,
                       shape: BoxShape.circle,
                     ),
                     child: const Center(
                       child: Text(
                         'V',
                         style: TextStyle(
-                          color: AppColor.accentVoice,
+                          color: AppColor.iconOnAccent,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -136,6 +136,15 @@ class _DsMessageBubbleState extends State<DsMessageBubble> {
                             ? null
                             : Border.all(color: AppColor.border),
                         borderRadius: BorderRadius.circular(AppRadius.bubble),
+                        boxShadow: isUser
+                            ? const []
+                            : const [
+                                BoxShadow(
+                                  color: Color(0x120B7F87),
+                                  blurRadius: 12,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSpace.md,
@@ -197,6 +206,16 @@ class _MessageBody extends StatelessWidget {
             audioPath: audios[i].path,
             duration: audios[i].duration,
             levels: audios[i].levels,
+            playColor: isAssistant ? AppColor.accentVoice : AppColor.accentSoft,
+            playIconColor: isAssistant
+                ? AppColor.iconOnAccent
+                : AppColor.accentPurple,
+            waveformColor: isAssistant
+                ? AppColor.textPlaceholder
+                : AppColor.accentSoft,
+            playedWaveformColor: isAssistant
+                ? AppColor.accentVoice
+                : AppColor.textOnAccent,
           ),
         ],
         if (audios.isNotEmpty && hasText) const SizedBox(height: AppSpace.sm),

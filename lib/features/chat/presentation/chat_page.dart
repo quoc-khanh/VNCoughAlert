@@ -526,7 +526,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final demoPhase = ref.watch(chatStoreProvider).phaseOf(_activeChatId);
     return Column(
       children: [
-        SafeArea(bottom: false, child: _buildHeader(isWide: isWide)),
+        Container(
+          color: AppColor.headerTeal,
+          child: SafeArea(bottom: false, child: _buildHeader(isWide: isWide)),
+        ),
         Expanded(child: _buildMessages(messages)),
         SafeArea(
           top: false,
@@ -555,17 +558,32 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           children: [
                             DsDemoActionChip(
                               label: 'Chẩn đoán mới',
+                              icon: const Icon(
+                                Icons.health_and_safety_outlined,
+                                size: 16,
+                                color: AppColor.accentVoice,
+                              ),
                               onTap: _startNewDiagnosisDemo,
                             ),
                             const SizedBox(width: AppSpace.xs),
                             DsDemoActionChip(
                               label: 'Xu hướng',
+                              icon: const Icon(
+                                Icons.trending_up_rounded,
+                                size: 16,
+                                color: AppColor.accentVoice,
+                              ),
                               onTap: () =>
                                   _showPlaceholder(DemoDiagnosis.trendMessage),
                             ),
                             const SizedBox(width: AppSpace.xs),
                             DsDemoActionChip(
                               label: 'Báo cáo',
+                              icon: const Icon(
+                                Icons.description_outlined,
+                                size: 16,
+                                color: AppColor.accentVoice,
+                              ),
                               onTap: () =>
                                   _showPlaceholder(DemoDiagnosis.reportMessage),
                             ),
@@ -635,85 +653,125 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Widget _buildHeader({required bool isWide}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpace.md,
-        vertical: AppSpace.sm,
-      ),
-      child: Row(
-        children: [
-          if (isWide)
-            const SizedBox(width: 40)
-          else
-            DsIconButton(
-              icon: IconfyIcons.editor.hamburgerMenu.outline.regular,
-              tooltip: 'Menu',
-              onPressed: () => ref.read(sidebarOpenProvider.notifier).open(),
-            ),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: isWide
-                  ? MainAxisAlignment.start
-                  : MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: const BoxDecoration(
-                    color: AppColor.accentSoft,
-                    shape: BoxShape.circle,
+    return Container(
+      color: AppColor.headerTeal,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.md,
+          vertical: AppSpace.xs,
+        ),
+        child: Row(
+          children: [
+            if (isWide)
+              const SizedBox(width: 40)
+            else
+              DsIconButton(
+                icon: IconfyIcons.editor.hamburgerMenu.outline.regular,
+                tooltip: 'Menu',
+                iconColor: AppColor.iconOnAccent,
+                onPressed: () => ref.read(sidebarOpenProvider.notifier).open(),
+              ),
+            Expanded(
+              child: Row(
+                mainAxisAlignment: isWide
+                    ? MainAxisAlignment.start
+                    : MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      color: Color(0x38FFFFFF),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.health_and_safety_outlined,
+                      color: AppColor.iconOnAccent,
+                      size: 20,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.health_and_safety_outlined,
-                    color: AppColor.accentVoice,
-                    size: 19,
+                  const SizedBox(width: AppSpace.xs),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'VN Cough Alert',
+                        style: AppTextStyle.label(color: AppColor.textOnAccent),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFB9FFE9),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpace.xxs),
+                          Text(
+                            'Đang hoạt động',
+                            style: AppTextStyle.caption(
+                              color: AppColor.textOnAccent,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  tooltip: 'Thông báo',
+                  onPressed: () => _showPlaceholder('Chưa có thông báo mới'),
+                  icon: const Icon(
+                    Icons.notifications_none_rounded,
+                    color: AppColor.iconOnAccent,
                   ),
                 ),
-                const SizedBox(width: AppSpace.xs),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('VNCoughAlert', style: AppTextStyle.label()),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            color: AppColor.accentSuccess,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpace.xxs),
-                        Text(
-                          'Trợ lý sức khỏe hô hấp',
-                          style: AppTextStyle.caption(),
-                        ),
-                      ],
+                Positioned(
+                  top: 3,
+                  right: 2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: AppColor.accentPurple,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
                     ),
-                  ],
+                    child: Text(
+                      '4',
+                      style: AppTextStyle.caption(
+                        color: AppColor.textOnAccent,
+                      ).copyWith(fontSize: 10),
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          DsIconButton(
-            icon: IconfyIcons.essential.editSquare.outline.regular,
-            tooltip: 'New chat',
-            onPressed: () async {
-              await _cancelRecording();
-              await _clearVoiceDrafts();
-              if (!mounted) {
-                return;
-              }
-              setState(() {
-                _draftChatId = null;
-                _composer.clear();
-              });
-              widget.onNewChat();
-            },
-          ),
-        ],
+            DsIconButton(
+              icon: IconfyIcons.essential.editSquare.outline.regular,
+              tooltip: 'Cuộc trò chuyện mới',
+              iconColor: AppColor.iconOnAccent,
+              onPressed: () async {
+                await _cancelRecording();
+                await _clearVoiceDrafts();
+                if (!mounted) {
+                  return;
+                }
+                setState(() {
+                  _draftChatId = null;
+                  _composer.clear();
+                });
+                widget.onNewChat();
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -855,31 +913,31 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   Widget _buildSidebar(List<ChatSession> recents) {
     return DsSidebarPanel(
-      title: 'VNCoughAlert',
-      searchHint: 'Search',
+      title: 'VN Cough Alert',
+      searchHint: 'Tìm kiếm',
       searchController: _search,
       onSearchChanged: (value) => setState(() => _query = value),
-      recentsLabel: 'Recents',
+      recentsLabel: 'Gần đây',
       navItems: [
         DsSidebarNavItem(
           icon: IconfyIcons.essential.document.outline.regular,
-          label: 'Library',
-          onTap: () => _showPlaceholder('Library coming soon'),
+          label: 'Thông tin sức khỏe',
+          onTap: () => _showPlaceholder('Tính năng đang được phát triển'),
         ),
         DsSidebarNavItem(
           icon: IconfyIcons.essential.folder.outline.regular,
-          label: 'Projects',
-          onTap: () => _showPlaceholder('Projects coming soon'),
+          label: 'Lịch sử chẩn đoán',
+          onTap: () => _showPlaceholder('Tính năng đang được phát triển'),
         ),
         DsSidebarNavItem(
           icon: IconfyIcons.essential.category.outline.regular,
-          label: 'Plugins',
-          onTap: () => _showPlaceholder('Plugins coming soon'),
+          label: 'Cơ sở y tế',
+          onTap: () => _showPlaceholder('Tính năng đang được phát triển'),
         ),
         DsSidebarNavItem(
           icon: IconfyIcons.essential.moreCircle.outline.regular,
-          label: 'More',
-          onTap: () => _showPlaceholder('More coming soon'),
+          label: 'Cài đặt',
+          onTap: () => _showPlaceholder('Tính năng đang được phát triển'),
         ),
       ],
       recents: [
@@ -915,8 +973,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Guest', style: AppTextStyle.label()),
-              Text('Mock workspace', style: AppTextStyle.caption()),
+              Text('Khách', style: AppTextStyle.label()),
+              Text('Tài khoản dùng thử', style: AppTextStyle.caption()),
             ],
           ),
         ],

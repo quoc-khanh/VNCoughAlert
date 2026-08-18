@@ -80,8 +80,8 @@ void main() {
 
     await openSidebar(tester);
 
-    expect(find.text('Recents'), findsOneWidget);
-    expect(find.text('Library'), findsOneWidget);
+    expect(find.text('Gần đây'), findsOneWidget);
+    expect(find.text('Thông tin sức khỏe'), findsOneWidget);
     expect(find.text('Ho khan kéo dài 2 tuần'), findsOneWidget);
   });
 
@@ -129,7 +129,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     await tester.pump();
 
-    await tester.tap(find.byTooltip('New chat'));
+    await tester.tap(find.byTooltip('Cuộc trò chuyện mới'));
     await tester.pumpAndSettle();
 
     expect(bubbleText('Keep this thread'), findsNothing);
@@ -151,7 +151,7 @@ void main() {
     tester,
   ) async {
     await pumpApp(tester);
-    await tester.tap(find.byTooltip('New chat'));
+    await tester.tap(find.byTooltip('Cuộc trò chuyện mới'));
     await tester.pumpAndSettle();
 
     expect(find.byType(DsRecentRow), findsNWidgets(4));
@@ -163,7 +163,7 @@ void main() {
 
     expect(find.byType(DsTypingDots), findsOneWidget);
 
-    await tester.tap(find.byTooltip('New chat'));
+    await tester.tap(find.byTooltip('Cuộc trò chuyện mới'));
     await tester.pump();
 
     expect(bubbleText('Pending then new'), findsNothing);
@@ -211,7 +211,7 @@ void main() {
 
     expect(bubbleText('Khó thở nhẹ buổi tối'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('New chat'));
+    await tester.tap(find.byTooltip('Cuộc trò chuyện mới'));
     await tester.pumpAndSettle();
     await sendComposer(tester, 'Brand new thread');
     await tester.pump(const Duration(milliseconds: 600));

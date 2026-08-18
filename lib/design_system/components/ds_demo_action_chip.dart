@@ -19,10 +19,10 @@ class DsDemoActionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColor.composerFill,
+      color: AppColor.accentTint,
       shape: RoundedSuperellipseBorder(
         borderRadius: BorderRadius.circular(AppRadius.pill),
-        side: const BorderSide(color: AppColor.border),
+        side: const BorderSide(color: AppColor.accentVoice),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -36,7 +36,10 @@ class DsDemoActionChip extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[icon!, const SizedBox(width: AppSpace.xxs)],
-              Text(label, style: AppTextStyle.label()),
+              Text(
+                label,
+                style: AppTextStyle.label(color: AppColor.accentVoicePressed),
+              ),
             ],
           ),
         ),

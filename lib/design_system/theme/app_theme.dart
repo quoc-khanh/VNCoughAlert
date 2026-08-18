@@ -5,7 +5,7 @@ import 'package:vncoughalert/design_system/tokens/app_text_style.dart';
 abstract final class AppTheme {
   static ThemeData get light {
     final colorScheme = ColorScheme.light(
-      primary: AppColor.accentVoice,
+      primary: AppColor.headerTeal,
       onPrimary: AppColor.textOnAccent,
       surface: AppColor.canvas,
       onSurface: AppColor.textHigh,
@@ -31,8 +31,8 @@ abstract final class AppTheme {
       appBarTheme: const AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: AppColor.canvas,
-        foregroundColor: AppColor.textHigh,
+        backgroundColor: AppColor.headerTeal,
+        foregroundColor: AppColor.textOnAccent,
       ),
       dividerColor: AppColor.divider,
       textTheme: TextTheme(

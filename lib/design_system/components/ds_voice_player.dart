@@ -12,11 +12,19 @@ class DsVoicePlayer extends StatefulWidget {
     required this.duration,
     this.audioPath,
     this.levels = const [],
+    this.playColor = AppColor.accentVoice,
+    this.playIconColor = AppColor.iconOnAccent,
+    this.waveformColor = AppColor.textPlaceholder,
+    this.playedWaveformColor = AppColor.accentVoice,
   });
 
   final String? audioPath;
   final Duration duration;
   final List<double> levels;
+  final Color playColor;
+  final Color playIconColor;
+  final Color waveformColor;
+  final Color playedWaveformColor;
 
   @override
   State<DsVoicePlayer> createState() => _DsVoicePlayerState();
@@ -94,7 +102,7 @@ class _DsVoicePlayerState extends State<DsVoicePlayer> {
     return Row(
       children: [
         Material(
-          color: AppColor.iconDefault,
+          color: widget.playColor,
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
@@ -108,7 +116,7 @@ class _DsVoicePlayerState extends State<DsVoicePlayer> {
                       ? IconfyIcons.audio.pause.bold.regular
                       : IconfyIcons.audio.play.bold.regular,
                   size: 18,
-                  color: AppColor.iconOnAccent,
+                  color: widget.playIconColor,
                 ),
               ),
             ),
@@ -122,6 +130,8 @@ class _DsVoicePlayerState extends State<DsVoicePlayer> {
                 : widget.levels,
             progress: progress,
             height: 24,
+            color: widget.waveformColor,
+            playedColor: widget.playedWaveformColor,
           ),
         ),
         const SizedBox(width: AppSpace.sm),
