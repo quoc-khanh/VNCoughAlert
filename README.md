@@ -20,7 +20,7 @@ flutter run -d chrome
 If you need to expose it to your phone over the local network:
 
 ```bash
-flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080
+./tool/run_web_local.sh
 ```
 
 Then open `http://<your-computer-lan-ip>:8080` on the iPhone.
