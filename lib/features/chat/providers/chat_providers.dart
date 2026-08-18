@@ -6,10 +6,7 @@ import 'package:vncoughalert/features/chat/data/mock_chat_repository.dart';
 import 'package:vncoughalert/features/chat/domain/models/chat_models.dart';
 
 class ChatStoreState {
-  const ChatStoreState({
-    required this.sessions,
-    required this.messagesByChat,
-  });
+  const ChatStoreState({required this.sessions, required this.messagesByChat});
 
   final List<ChatSession> sessions;
   final Map<String, List<ChatMessage>> messagesByChat;
@@ -20,7 +17,6 @@ class ChatStoreState {
     }
     return messagesByChat[chatId] ?? const [];
   }
-
 }
 
 class ChatStore extends Notifier<ChatStoreState> {

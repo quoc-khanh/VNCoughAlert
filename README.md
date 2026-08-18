@@ -34,6 +34,17 @@ The app uses **flutter_riverpod** and **zenrouter**. Every message in a chat use
 Text and voice messages are sent through the same chat history. Voice messages are currently represented
 as a text placeholder until audio transcription is connected.
 
+## Contest demo flow
+
+1. Tap **Bắt đầu sàng lọc AI**. The assistant asks for age, medical history and current symptoms.
+2. Use the microphone. Recording displays a live waveform and stops/submits automatically at 5 seconds.
+3. If the sound level is unusually high, the app asks the user to record again in a quieter place.
+4. Continue the conversation for safety guidance, warning signs, recommendations and medical sources.
+5. Open **Quyền riêng tư** to show the consent and anonymized audio-processing notice.
+
+The app does not fabricate diagnosis cards or case-study results. The LLM must clearly label its output as
+reference-only and state when audio analysis is not available.
+
 ## Run with Mistral
 
 Get an API key from [Mistral AI](https://console.mistral.ai/), then:

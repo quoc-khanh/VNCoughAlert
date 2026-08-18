@@ -127,19 +127,22 @@ void main() {
     expect(messages.last.text, MistralChatConfig.requestFailedMessage);
   });
 
-  test('every chat message, including voice placeholders, uses Mistral', () async {
-    final id = store.newChatId();
-    await store.send(
-      chatId: id,
-      text: 'Tôi bị ho và khó thở nhẹ.',
-      audios: [
-        ChatAudio(path: '/tmp/demo.m4a', duration: Duration(seconds: 5)),
-      ],
-    );
+  test(
+    'every chat message, including voice placeholders, uses Mistral',
+    () async {
+      final id = store.newChatId();
+      await store.send(
+        chatId: id,
+        text: 'Tôi bị ho và khó thở nhẹ.',
+        audios: [
+          ChatAudio(path: '/tmp/demo.m4a', duration: Duration(seconds: 5)),
+        ],
+      );
 
-    final messages = state().messagesOf(id);
-    expect(messages.last.isPending, isFalse);
-    expect(messages.last.text, 'streamed reply');
-    expect(llm.lastMessages, isNotNull);
-  });
+      final messages = state().messagesOf(id);
+      expect(messages.last.isPending, isFalse);
+      expect(messages.last.text, 'streamed reply');
+      expect(llm.lastMessages, isNotNull);
+    },
+  );
 }

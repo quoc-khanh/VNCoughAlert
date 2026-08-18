@@ -162,5 +162,4 @@ class MockChatRepository {
     }
     return '${trimmed.substring(0, 42)}…';
   }
-
 }

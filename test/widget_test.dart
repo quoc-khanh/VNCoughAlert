@@ -221,4 +221,59 @@ void main() {
     expect(recentText('Second API thread'), findsOneWidget);
     expect(bubbleText('Second API thread'), findsOneWidget);
   });
+
+  testWidgets('screening shortcut creates an API-backed chat message', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Bắt đầu sàng lọc AI'));
+    await tester.pump();
+
+    expect(find.byType(DsTypingDots), findsOneWidget);
+    expect(find.byType(DsMessageBubble), findsNWidgets(2));
+
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump();
+
+    expect(find.byType(DsTypingDots), findsNothing);
+    expect(find.textContaining('Mistral test reply for:'), findsOneWidget);
+  });
+
+  testWidgets('privacy dialog requires acknowledgement before continuing', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Quyền riêng tư'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Điều khoản & quyền riêng tư'), findsOneWidget);
+    expect(find.text('Tôi đã hiểu và đồng ý tiếp tục.'), findsOneWidget);
+
+    await tester.tap(find.text('Tôi đã hiểu và đồng ý tiếp tục.'));
+    await tester.pump();
+    await tester.tap(find.text('Tiếp tục'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Điều khoản & quyền riêng tư'), findsNothing);
+  });
+
+  testWidgets('recording composer shows the five-second limit', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DsComposer(
+            controller: TextEditingController(),
+            hintText: 'Nhập tin nhắn...',
+            isRecording: true,
+            recordingElapsed: const Duration(seconds: 3),
+            waveformLevels: const [0.2, 0.7, 0.4],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('00:03 / 00:05'), findsOneWidget);
+  });
 }

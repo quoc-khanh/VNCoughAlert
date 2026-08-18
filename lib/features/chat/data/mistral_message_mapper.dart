@@ -35,11 +35,15 @@ mistral.ChatMessage _toApi(ChatRole role, String content) {
 
 String _contentFor(ChatMessage message) {
   final trimmed = message.text.trim();
+  final parts = <String>[];
   if (trimmed.isNotEmpty) {
-    return trimmed;
+    parts.add(trimmed);
   }
   if (message.audios.isNotEmpty) {
-    return MistralChatConfig.voicePlaceholder;
+    parts.add(
+      '${MistralChatConfig.voicePlaceholder} '
+      'Thời lượng: ${message.audios.first.duration.inSeconds} giây.',
+    );
   }
-  return '';
+  return parts.join('\n\n');
 }

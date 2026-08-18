@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconfy_icon/iconfy_icon.dart';
 import 'package:motor/motor.dart';
 import 'package:vncoughalert/design_system/design_system.dart';
+import 'package:vncoughalert/features/chat/data/mistral_config.dart';
 import 'package:vncoughalert/features/chat/data/voice_recorder.dart';
 import 'package:vncoughalert/features/chat/domain/models/chat_models.dart';
 import 'package:vncoughalert/features/chat/providers/chat_providers.dart';
@@ -39,10 +40,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   var _recording = false;
   final List<VoiceClip> _voiceDrafts = [];
   List<double> _waveformLevels = const [];
+  Timer? _recordingTimer;
+  DateTime? _recordingStartedAt;
+  Duration _recordingElapsed = Duration.zero;
 
   static const _flingVelocity = 700.0;
   static const _showJumpPixels = 64.0;
   static const _hideJumpPixels = 24.0;
+  static const _maxRecordingDuration = Duration(seconds: 5);
 
   @override
   void initState() {
@@ -57,6 +62,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _search.dispose();
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
+    _recordingTimer?.cancel();
     _amplitudeSub?.cancel();
     _recorder.dispose();
     super.dispose();
@@ -203,19 +209,63 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _showPrivacyDialog() async {
+    var accepted = false;
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Điều khoản & quyền riêng tư'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'VNCoughAlert chỉ cung cấp cảnh báo tham khảo, không thay thế chẩn đoán hoặc điều trị của bác sĩ.',
+                      style: AppTextStyle.bodySm(),
+                    ),
+                    const SizedBox(height: AppSpace.sm),
+                    Text(
+                      'Khi ghi âm, dữ liệu âm thanh được gửi cùng phiên chat để xử lý. Không nhập thông tin định danh nhạy cảm.',
+                      style: AppTextStyle.bodySm(),
+                    ),
+                    const SizedBox(height: AppSpace.sm),
+                    CheckboxListTile(
+                      value: accepted,
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: const Text('Tôi đã hiểu và đồng ý tiếp tục.'),
+                      onChanged: (value) {
+                        setDialogState(() => accepted = value ?? false);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Đóng'),
+                ),
+                FilledButton(
+                  onPressed: accepted ? () => Navigator.pop(context) : null,
+                  child: const Text('Tiếp tục'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _submit(String raw, {List<VoiceClip>? forceClips}) async {
     final clips = forceClips ?? List<VoiceClip>.from(_voiceDrafts);
     if (_recording) {
-      _amplitudeSub?.cancel();
-      _amplitudeSub = null;
-      final clip = await _recorder.stop();
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _recording = false;
-        _waveformLevels = const [];
-      });
+      final clip = await _finishActiveRecording();
       if (clip != null) {
         clips.add(clip);
       }
@@ -254,6 +304,47 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _scheduleStickToLatest(animate: true);
   }
 
+  Future<VoiceClip?> _finishActiveRecording() async {
+    _recordingTimer?.cancel();
+    _recordingTimer = null;
+    _amplitudeSub?.cancel();
+    _amplitudeSub = null;
+    final clip = await _recorder.stop();
+    if (!mounted) {
+      return clip;
+    }
+    setState(() {
+      _recording = false;
+      _recordingStartedAt = null;
+      _recordingElapsed = Duration.zero;
+      _waveformLevels = const [];
+    });
+    return clip;
+  }
+
+  bool _isTooNoisy(VoiceClip clip) {
+    if (clip.levels.length < 8) {
+      return false;
+    }
+    final loudSamples = clip.levels.where((level) => level > 0.86).length;
+    return loudSamples / clip.levels.length > 0.7;
+  }
+
+  Future<void> _autoSubmitRecording() async {
+    final clip = await _finishActiveRecording();
+    if (!mounted || clip == null) {
+      return;
+    }
+    if (_isTooNoisy(clip)) {
+      await _recorder.deleteClip(clip);
+      _showPlaceholder(
+        'Môi trường đang có nhiều tiếng ồn. Vui lòng thu âm lại ở nơi yên tĩnh hơn.',
+      );
+      return;
+    }
+    await _submit('', forceClips: [clip]);
+  }
+
   Future<void> _startRecording() async {
     if (_recording) {
       return;
@@ -276,6 +367,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
     setState(() {
       _recording = true;
+      _recordingStartedAt = DateTime.now();
+      _recordingElapsed = Duration.zero;
       _waveformLevels = const [];
     });
     _amplitudeSub?.cancel();
@@ -285,20 +378,34 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       }
       setState(() => _waveformLevels = _recorder.levels);
     });
+    _recordingTimer?.cancel();
+    _recordingTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (!mounted || !_recording) {
+        return;
+      }
+      final startedAt = _recordingStartedAt;
+      if (startedAt == null) {
+        return;
+      }
+      final elapsed = DateTime.now().difference(startedAt);
+      setState(() => _recordingElapsed = elapsed);
+      if (elapsed >= _maxRecordingDuration) {
+        _recordingTimer?.cancel();
+        _recordingTimer = null;
+        unawaited(_autoSubmitRecording());
+      }
+    });
   }
 
   Future<void> _stopRecording() async {
     if (!_recording) {
       return;
     }
-    _amplitudeSub?.cancel();
-    _amplitudeSub = null;
-    final clip = await _recorder.stop();
+    final clip = await _finishActiveRecording();
     if (!mounted) {
       return;
     }
     setState(() {
-      _recording = false;
       if (clip != null) {
         _voiceDrafts.add(clip);
       }
@@ -310,6 +417,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (!_recording) {
       return;
     }
+    _recordingTimer?.cancel();
+    _recordingTimer = null;
     _amplitudeSub?.cancel();
     _amplitudeSub = null;
     await _recorder.cancel();
@@ -318,6 +427,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
     setState(() {
       _recording = false;
+      _recordingStartedAt = null;
+      _recordingElapsed = Duration.zero;
       _waveformLevels = const [];
     });
   }
@@ -354,70 +465,78 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       }
       return session.title.toLowerCase().contains(_query.toLowerCase());
     }).toList();
-    final isWide = MediaQuery.sizeOf(context).width >= 960;
-    final panelWidth = _sidebarWidth();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 960;
+        final panelWidth = _sidebarWidth();
 
-    return PopScope(
-      canPop: !sidebarOpen,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) {
-          return;
-        }
-        _closeSidebar();
-      },
-      child: Scaffold(
-        backgroundColor: AppColor.sidebar,
-        resizeToAvoidBottomInset: isWide || !sidebarOpen,
-        body: isWide
-            ? _buildWideLayout(messages, recents)
-            : Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  IgnorePointer(
-                    ignoring:
-                        (_dragging ? _dragT : (sidebarOpen ? 1.0 : 0.0)) < 0.5,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: SizedBox(
-                        width: panelWidth,
-                        child: _buildSidebar(recents),
-                      ),
-                    ),
-                  ),
-                  SingleMotionBuilder(
-                    motion: const CupertinoMotion.bouncy(),
-                    active: !_dragging,
-                    value: _dragging ? _dragT : (sidebarOpen ? 1.0 : 0.0),
-                    builder: (context, t, child) {
-                      return Transform.translate(
-                        offset: Offset(panelWidth * t, 0),
-                        child: _buildChatSheet(
-                          t: t,
-                          sidebarOpen: sidebarOpen,
-                          child: child,
+        return PopScope(
+          canPop: !sidebarOpen,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) {
+              return;
+            }
+            _closeSidebar();
+          },
+          child: Scaffold(
+            backgroundColor: AppColor.sidebar,
+            resizeToAvoidBottomInset: isWide || !sidebarOpen,
+            body: isWide
+                ? _buildWideLayout(messages, recents)
+                : Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IgnorePointer(
+                        ignoring:
+                            (_dragging ? _dragT : (sidebarOpen ? 1.0 : 0.0)) <
+                            0.5,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: SizedBox(
+                            width: panelWidth,
+                            child: _buildSidebar(recents),
+                          ),
                         ),
-                      );
-                    },
-                    child: _buildChatColumn(messages),
-                  ),
-                  if ((_edgeOpenEnabled && !sidebarOpen) || _dragging)
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: AppSpace.xl,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onHorizontalDragStart: (_) =>
-                            _onSidebarDragStart(open: sidebarOpen),
-                        onHorizontalDragUpdate: (details) =>
-                            _onSidebarDragUpdate(details.delta.dx, panelWidth),
-                        onHorizontalDragEnd: _onSidebarDragEnd,
                       ),
-                    ),
-                ],
-              ),
-      ),
+                      SingleMotionBuilder(
+                        motion: const CupertinoMotion.bouncy(),
+                        active: !_dragging,
+                        value: _dragging ? _dragT : (sidebarOpen ? 1.0 : 0.0),
+                        builder: (context, t, child) {
+                          return Transform.translate(
+                            offset: Offset(panelWidth * t, 0),
+                            child: _buildChatSheet(
+                              t: t,
+                              sidebarOpen: sidebarOpen,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: _buildChatColumn(messages),
+                      ),
+                      if ((_edgeOpenEnabled && !sidebarOpen) || _dragging)
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: AppSpace.xl,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onHorizontalDragStart: (_) =>
+                                _onSidebarDragStart(open: sidebarOpen),
+                            onHorizontalDragUpdate: (details) =>
+                                _onSidebarDragUpdate(
+                                  details.delta.dx,
+                                  panelWidth,
+                                ),
+                            onHorizontalDragEnd: _onSidebarDragEnd,
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+        );
+      },
     );
   }
 
@@ -462,21 +581,45 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpace.xs),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.verified_user_outlined,
+                              size: 15,
+                              color: AppColor.accentVoice,
+                            ),
+                            const SizedBox(width: AppSpace.xxs),
+                            Expanded(
+                              child: Text(
+                                'Cảnh báo tham khảo • Không thay thế bác sĩ',
+                                style: AppTextStyle.caption(
+                                  color: AppColor.textMedium,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _showPrivacyDialog,
+                              child: const Text('Quyền riêng tư'),
+                            ),
+                          ],
+                        ),
+                      ),
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.only(bottom: AppSpace.sm),
                         child: Row(
                           children: [
                             DsDemoActionChip(
-                              label: 'Mô tả triệu chứng',
+                              label: 'Bắt đầu sàng lọc AI',
                               icon: const Icon(
                                 Icons.health_and_safety_outlined,
                                 size: 16,
                                 color: AppColor.accentVoice,
                               ),
-                              onTap: () => _submit(
-                                'Tôi muốn mô tả triệu chứng hô hấp của mình.',
-                              ),
+                              onTap: () =>
+                                  _submit(MistralChatConfig.screeningPrompt),
                             ),
                             const SizedBox(width: AppSpace.xs),
                             DsDemoActionChip(
@@ -542,6 +685,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                               onSubmitted: _submit,
                               isRecording: _recording,
                               waveformLevels: _waveformLevels,
+                              recordingElapsed: _recordingElapsed,
                               onCancelRecording: _cancelRecording,
                               onStopRecording: _stopRecording,
                             ),
@@ -568,6 +712,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   }
 
   Widget _buildHeader({required bool isWide}) {
+    final apiReady = ref.watch(mistralChatConfigProvider).hasApiKey;
     return Container(
       color: AppColor.headerTeal,
       child: Padding(
@@ -619,14 +764,16 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           Container(
                             width: 6,
                             height: 6,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFB9FFE9),
+                            decoration: BoxDecoration(
+                              color: apiReady
+                                  ? const Color(0xFFB9FFE9)
+                                  : AppColor.warning,
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: AppSpace.xxs),
                           Text(
-                            'Đang hoạt động',
+                            apiReady ? 'API AI sẵn sàng' : 'Thiếu API key',
                             style: AppTextStyle.caption(
                               color: AppColor.textOnAccent,
                             ),
@@ -794,6 +941,24 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 textAlign: TextAlign.center,
                 style: AppTextStyle.bodySm(),
               ),
+              const SizedBox(height: AppSpace.md),
+              Container(
+                padding: const EdgeInsets.all(AppSpace.sm),
+                decoration: BoxDecoration(
+                  color: AppColor.surfaceSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.control),
+                  border: Border.all(color: AppColor.border),
+                ),
+                child: const Row(
+                  children: [
+                    _FlowStep(number: '1', label: 'Thông tin'),
+                    _FlowArrow(),
+                    _FlowStep(number: '2', label: 'Ho 5 giây'),
+                    _FlowArrow(),
+                    _FlowStep(number: '3', label: 'Cảnh báo AI'),
+                  ],
+                ),
+              ),
               const SizedBox(height: AppSpace.lg),
               Wrap(
                 alignment: WrapAlignment.center,
@@ -814,6 +979,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   ),
                 ],
               ),
+              const SizedBox(height: AppSpace.sm),
+              TextButton.icon(
+                onPressed: _showPrivacyDialog,
+                icon: const Icon(Icons.privacy_tip_outlined, size: 16),
+                label: const Text('Xem điều khoản & quyền riêng tư'),
+              ),
             ],
           ),
         ),
@@ -832,7 +1003,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         DsSidebarNavItem(
           icon: IconfyIcons.essential.document.outline.regular,
           label: 'Thông tin sức khỏe',
-          onTap: () => _showPlaceholder('Tính năng đang được phát triển'),
+          onTap: () {
+            _closeSidebar();
+            unawaited(
+              _submit(
+                'Hãy giúp tôi tổng hợp thông tin sức khỏe hô hấp cần cung cấp: tuổi, tiền sử bệnh và triệu chứng hiện tại.',
+              ),
+            );
+          },
         ),
         DsSidebarNavItem(
           icon: IconfyIcons.essential.folder.outline.regular,
@@ -842,12 +1020,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         DsSidebarNavItem(
           icon: IconfyIcons.essential.category.outline.regular,
           label: 'Cơ sở y tế',
-          onTap: () => _showPlaceholder('Tính năng đang được phát triển'),
+          onTap: () {
+            _closeSidebar();
+            unawaited(
+              _submit(
+                'Hãy hướng dẫn tôi cách tìm cơ sở y tế gần nhất và khi nào cần đi cấp cứu.',
+              ),
+            );
+          },
         ),
         DsSidebarNavItem(
           icon: IconfyIcons.essential.moreCircle.outline.regular,
           label: 'Cài đặt',
-          onTap: () => _showPlaceholder('Tính năng đang được phát triển'),
+          onTap: _showPrivacyDialog,
         ),
       ],
       recents: [
@@ -914,6 +1099,51 @@ class _SuggestionChip extends StatelessWidget {
         horizontal: AppSpace.xs,
         vertical: AppSpace.xxs,
       ),
+    );
+  }
+}
+
+class _FlowStep extends StatelessWidget {
+  const _FlowStep({required this.number, required this.label});
+
+  final String number;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircleAvatar(
+            radius: 13,
+            backgroundColor: AppColor.accentVoice,
+            child: Text(
+              number,
+              style: AppTextStyle.caption(color: AppColor.textOnAccent),
+            ),
+          ),
+          const SizedBox(height: AppSpace.xxs),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: AppTextStyle.caption(color: AppColor.textMedium),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FlowArrow extends StatelessWidget {
+  const _FlowArrow();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Icon(
+      Icons.arrow_forward_rounded,
+      size: 16,
+      color: AppColor.border,
     );
   }
 }

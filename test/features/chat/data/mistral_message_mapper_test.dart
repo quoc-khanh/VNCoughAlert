@@ -72,7 +72,28 @@ void main() {
 
       expect(mapped, hasLength(2));
       expect(mapped[1], isA<mistral.UserMessage>());
-      expect(mapped[1].toJson()['content'], MistralChatConfig.voicePlaceholder);
+      expect(
+        mapped[1].toJson()['content'],
+        '${MistralChatConfig.voicePlaceholder} Thời lượng: 3 giây.',
+      );
+    });
+
+    test('keeps text context together with a voice placeholder', () {
+      final mapped = mapChatHistory([
+        user(
+          'u1',
+          'Tôi bị khó thở nhẹ.',
+          audios: const [
+            ChatAudio(path: '/tmp/note.m4a', duration: Duration(seconds: 5)),
+          ],
+        ),
+      ]);
+
+      expect(
+        mapped[1].toJson()['content'],
+        'Tôi bị khó thở nhẹ.\n\n'
+        '${MistralChatConfig.voicePlaceholder} Thời lượng: 5 giây.',
+      );
     });
 
     test('keeps system prompt and the last N conversation messages', () {

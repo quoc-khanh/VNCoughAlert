@@ -19,6 +19,7 @@ class DsComposer extends StatelessWidget {
     this.focusNode,
     this.isRecording = false,
     this.waveformLevels = const [],
+    this.recordingElapsed = Duration.zero,
     this.onCancelRecording,
     this.onStopRecording,
   });
@@ -32,6 +33,7 @@ class DsComposer extends StatelessWidget {
   final FocusNode? focusNode;
   final bool isRecording;
   final List<double> waveformLevels;
+  final Duration recordingElapsed;
   final VoidCallback? onCancelRecording;
   final VoidCallback? onStopRecording;
 
@@ -40,6 +42,7 @@ class DsComposer extends StatelessWidget {
     if (isRecording) {
       return _RecordingBar(
         levels: waveformLevels,
+        elapsed: recordingElapsed,
         onCancel: onCancelRecording,
         onStop: onStopRecording,
       );
@@ -120,9 +123,15 @@ class DsComposer extends StatelessWidget {
 }
 
 class _RecordingBar extends StatelessWidget {
-  const _RecordingBar({required this.levels, this.onCancel, this.onStop});
+  const _RecordingBar({
+    required this.levels,
+    required this.elapsed,
+    this.onCancel,
+    this.onStop,
+  });
 
   final List<double> levels;
+  final Duration elapsed;
   final VoidCallback? onCancel;
   final VoidCallback? onStop;
 
@@ -148,11 +157,21 @@ class _RecordingBar extends StatelessWidget {
               child: DsVoiceWaveform(levels: levels),
             ),
           ),
+          Text(
+            '${_formatDuration(elapsed)} / 00:05',
+            style: AppTextStyle.caption(color: AppColor.textMedium),
+          ),
+          const SizedBox(width: AppSpace.xs),
           _StopRecordingButton(onPressed: onStop),
         ],
       ),
     );
   }
+}
+
+String _formatDuration(Duration duration) {
+  final seconds = duration.inSeconds.clamp(0, 99);
+  return '00:${seconds.toString().padLeft(2, '0')}';
 }
 
 class _StopRecordingButton extends StatelessWidget {
